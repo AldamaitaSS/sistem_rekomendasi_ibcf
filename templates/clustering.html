@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+{% set active_page = "clustering" %}
+{% block title %}Clustering — RekoShop{% endblock %}
+
+{% block extra_style %}
+/* TOP STATS */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+}
+.stat-val {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.7rem; font-weight: 800; margin-bottom: 3px;
+}
+.stat-label { font-size: 0.78rem; color: var(--muted); font-weight: 500; }
+.stat-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 1.8rem; opacity: 0.25; }
+
+/* SILHOUETTE HERO */
+.sil-hero {
+  display: flex; align-items: center; gap: 32px;
+  background: linear-gradient(135deg, rgba(79,70,229,0.06) 0%, rgba(236,72,153,0.03) 100%);
+  border: 1px solid rgba(79,70,229,0.15);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  margin-bottom: 28px;
+}
+.sil-big {
+  font-family: 'Inter', sans-serif;
+  font-size: 4rem; font-weight: 800;
+  color: var(--green); flex-shrink: 0;
+  line-height: 1;
+}
+.sil-hero-right { flex: 1; }
+.sil-hero-right h3 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem; font-weight: 700; margin-bottom: 8px;
+}
+.sil-hero-right p { color: var(--muted); font-size: 0.88rem; line-height: 1.65; }
+.sil-benchmark {
+  display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap;
+}
+.bench-chip {
+  padding: 5px 12px; border-radius: 99px;
+  font-size: 0.78rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.bench-chip.yours { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+.bench-chip.lit   { background: #f3f4f6; color: var(--muted); border: 1px solid var(--border); }
+
+/* CLUSTER CARDS GRID */
+.cluster-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 28px;
+}
+.clust-card {
+  border-radius: var(--radius);
+  border: 1px solid;
+  padding: 24px;
+  position: relative; overflow: hidden;
+}
+.clust-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 18px;
+}
+.clust-badge {
+  display: flex; align-items: center; gap: 8px;
+}
+.clust-icon-big { font-size: 2rem; }
+.clust-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.15rem; font-weight: 800;
+}
+.clust-id { font-size: 0.72rem; opacity: 0.6; margin-top: 1px; }
+.clust-count-badge {
+  padding: 4px 10px; border-radius: 99px;
+  font-size: 0.8rem; font-weight: 700;
+}
+
+.clust-metrics {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px; margin-bottom: 18px;
+}
+.clust-metric { text-align: center; }
+.cm-val { font-family: 'Inter', sans-serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 2px; }
+.cm-label { font-size: 0.7rem; color: var(--muted); }
+
+.clust-products { display: flex; flex-direction: column; gap: 6px; }
+.cp-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 10px; border-radius: 6px;
+  background: #f8f9fb;
+  font-size: 0.82rem;
+}
+.cp-name { font-weight: 500; }
+.cp-sold { opacity: 0.6; font-size: 0.76rem; }
+.cp-price { font-weight: 600; font-size: 0.8rem; }
+
+/* SCATTER PLOT */
+.scatter-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 28px;
+}
+.scatter-title {
+  font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700;
+  margin-bottom: 4px;
+}
+.scatter-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 20px; }
+#scatterSvg { width: 100%; height: 360px; display: block; }
+.dot { cursor: pointer; transition: r .15s; }
+.dot:hover { r: 9; }
+.axis-label { font-size: 11px; fill: #9ca3af; font-family: 'Inter', sans-serif; }
+.axis-line { stroke: rgba(0,0,0,0.06); }
+.tooltip-box {
+  position: absolute; pointer-events: none;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  display: none;
+  z-index: 100;
+  box-shadow: var(--shadow);
+}
+
+/* LEGEND */
+.legend-row {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  margin-top: 14px;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.8rem; cursor: pointer;
+}
+.legend-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+{% endblock %}
+
+{% block content %}
+<div class="page fade-up">
+  <div class="section-header">
+    <div class="section-badge">🔮 K-Means Visualisasi</div>
+    <h1 class="section-title">Hasil <span>Clustering</span></h1>
+    <p class="section-sub">Visualisasi pengelompokan seluruh produk TikTok Shop menggunakan K-Means Clustering berdasarkan atribut harga dan berat.</p>
+  </div>
+
+  <!-- STATS ROW -->
+  <div class="stats-row">
+    <div class="stat-card" style="border-color:rgba(79,70,229,0.2)">
+      <div class="stat-card" style="position:absolute;inset:0;border:none;background:rgba(79,70,229,0.03)"></div>
+      <div class="stat-icon">📦</div>
+      <div class="stat-val" style="color:var(--accent)">{{ products|length }}</div>
+      <div class="stat-label">Total Produk</div>
+      <div style="position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--accent);border-radius:2px 0 0 2px"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🔮</div>
+      <div class="stat-val" style="color:var(--purple)">{{ summary|length }}</div>
+      <div class="stat-label">Jumlah Cluster (K)</div>
+      <div style="position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--purple);border-radius:2px 0 0 2px"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📈</div>
+      <div class="stat-val" style="color:var(--green)">{{ silhouette }}</div>
+      <div class="stat-label">Silhouette Score</div>
+      <div style="position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--green);border-radius:2px 0 0 2px"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🛒</div>
+      <div class="stat-val" style="color:var(--gold)">
+        {{ summary.values()|sum(attribute='total_sold') }}
+      </div>
+      <div class="stat-label">Total Terjual</div>
+      <div style="position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--gold);border-radius:2px 0 0 2px"></div>
+    </div>
+  </div>
+
+  <!-- SILHOUETTE HERO -->
+  <div class="sil-hero">
+    <div class="sil-big">{{ silhouette }}</div>
+    <div class="sil-hero-right">
+      <h3>Silhouette Score — Evaluasi Kualitas Clustering</h3>
+      <p>Silhouette Score mengukur seberapa baik setiap produk cocok di clusternya sendiri dibandingkan cluster lain. Nilai berkisar antara −1 hingga +1. Semakin mendekati 1, pengelompokan semakin baik dan terpisah.</p>
+      <div class="sil-benchmark">
+        <span class="bench-chip yours">✅ Skor Sistem: {{ silhouette }}</span>
+        <span class="bench-chip lit">📚 Benchmark Literatur: 0.57–0.58</span>
+        <span class="bench-chip yours" style="background:rgba(16,185,129,0.1)">🏆 Di atas benchmark</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCATTER PLOT -->
+  <div class="scatter-wrap">
+    <div class="scatter-title">Visualisasi Scatter Plot Cluster</div>
+    <div class="scatter-sub">Setiap titik mewakili satu produk. Sumbu X = PCA 1, Sumbu Y = PCA 2 (fitur yang digunakan K-Means). Warna menunjukkan cluster. ★ = centroid cluster.</div>
+    <div style="position:relative">
+      <svg id="scatterSvg" viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="tooltip-box" id="tooltip"></div>
+    </div>
+    <div class="legend-row" id="legend"></div>
+  </div>
+
+  <!-- CLUSTER DETAIL CARDS -->
+  <div style="font-family:'Inter',sans-serif; font-size:1.1rem; font-weight:700; margin-bottom:18px;">Detail Setiap Cluster</div>
+  <div class="cluster-grid">
+    {% for cid, clust in summary.items() %}
+    {% set cid_str = cid|string %}
+    <div class="clust-card" style="background:{{ clust.color }}0d; border-color:{{ clust.color }}33;">
+      <div class="clust-card-header">
+        <div class="clust-badge">
+          <div class="clust-icon-big">{{ clust.icon }}</div>
+          <div>
+            <div class="clust-name">{{ clust.name }}</div>
+            <div class="clust-id" style="color:{{ clust.color }}">Cluster {{ cid }}</div>
+          </div>
+        </div>
+        <span class="clust-count-badge" style="background:{{ clust.color }}22; color:{{ clust.color }}">
+          {{ clust.count }} produk
+        </span>
+      </div>
+
+      <div class="clust-metrics">
+        <div class="clust-metric">
+          <div class="cm-val" style="color:{{ clust.color }}">Rp {{ '{:,}'.format(clust.avg_price).replace(',','.') }}</div>
+          <div class="cm-label">Rata-rata Harga</div>
+        </div>
+        <div class="clust-metric">
+          <div class="cm-val" style="color:{{ clust.color }}">{{ clust.avg_weight }}g</div>
+          <div class="cm-label">Rata-rata Berat</div>
+        </div>
+        <div class="clust-metric">
+          <div class="cm-val" style="color:{{ clust.color }}">{{ clust.total_sold }}</div>
+          <div class="cm-label">Total Terjual</div>
+        </div>
+      </div>
+
+      <div class="clust-products">
+        {% for prod in clust.members %}
+        <div class="cp-row">
+          <span class="cp-name">{{ prod.name }}</span>
+          <span class="cp-price" style="color:{{ clust.color }}">Rp {{ '{:,}'.format(prod.price).replace(',','.') }}</span>
+          <span class="cp-sold">⬇ {{ prod.sold }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div id="tooltipGlobal" class="tooltip-box"></div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+const products = {{ products|tojson }};
+const clusterColors  = {{ cluster_colors|tojson }};
+const clusterIcons   = {{ cluster_icons|tojson }};
+const clusterNames   = {{ cluster_names|tojson }};
+const centroidsPCA   = {{ centroids_pca|tojson }};  // koordinat centroid asli dari K-Means
+
+// ── SCATTER PLOT (PCA1 vs PCA2) ───────────────────────────────────────────────
+(function drawScatter() {
+  const svg = document.getElementById('scatterSvg');
+  const W = 760, H = 340;
+  const pad = { top: 24, right: 30, bottom: 50, left: 60 };
+  const iW = W - pad.left - pad.right;
+  const iH = H - pad.top  - pad.bottom;
+
+  // Gunakan pca1 & pca2 yang merupakan fitur asli dari K-Means
+  const xVals = products.map(p => p.pca1);
+  const yVals = products.map(p => p.pca2);
+  const pad_x = (Math.max(...xVals) - Math.min(...xVals)) * 0.1;
+  const pad_y = (Math.max(...yVals) - Math.min(...yVals)) * 0.1;
+  const minX = Math.min(...xVals) - pad_x;
+  const maxX = Math.max(...xVals) + pad_x;
+  const minY = Math.min(...yVals) - pad_y;
+  const maxY = Math.max(...yVals) + pad_y;
+
+  const scaleX = v => pad.left + (v - minX) / (maxX - minX) * iW;
+  const scaleY = v => pad.top  + iH - (v - minY) / (maxY - minY) * iH;
+
+  const ns = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(ns, tag);
+    for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  // Grid lines X
+  const xTicks = 6;
+  for (let i = 0; i <= xTicks; i++) {
+    const xv = minX + (maxX - minX) / xTicks * i;
+    const x  = scaleX(xv);
+    el('line', { x1: x, y1: pad.top, x2: x, y2: pad.top + iH, stroke: 'rgba(0,0,0,0.06)' }, svg);
+    const t = el('text', { x, y: pad.top + iH + 18, class: 'axis-label', 'text-anchor': 'middle' }, svg);
+    t.textContent = xv.toFixed(2);
+  }
+  // Grid lines Y
+  const yTicks = 5;
+  for (let i = 0; i <= yTicks; i++) {
+    const yv = minY + (maxY - minY) / yTicks * i;
+    const y  = scaleY(yv);
+    el('line', { x1: pad.left, y1: y, x2: pad.left + iW, y2: y, stroke: 'rgba(0,0,0,0.06)' }, svg);
+    const t = el('text', { x: pad.left - 8, y: y + 4, class: 'axis-label', 'text-anchor': 'end' }, svg);
+    t.textContent = yv.toFixed(2);
+  }
+
+  // Axis labels
+  const xLab = el('text', { x: pad.left + iW / 2, y: H - 6, class: 'axis-label', 'text-anchor': 'middle' }, svg);
+  xLab.textContent = 'PCA 1';
+  const yLab = el('text', { x: 0, y: 0, class: 'axis-label', 'text-anchor': 'middle',
+    transform: `translate(12,${pad.top + iH / 2}) rotate(-90)` }, svg);
+  yLab.textContent = 'PCA 2';
+
+  // Centroid asli dari K-Means (koordinat PCA)
+  centroidsPCA.forEach((c, cid) => {
+    const cx = scaleX(c[0]), cy = scaleY(c[1]);
+    el('circle', { cx, cy, r: 28, fill: clusterColors[cid], opacity: 0.08 }, svg);
+    el('circle', { cx, cy, r:  6, fill: clusterColors[cid], opacity: 0.9,
+      stroke: '#fff', 'stroke-width': 2 }, svg);
+    const t = el('text', { x: cx, y: cy - 14, class: 'axis-label',
+      'text-anchor': 'middle', fill: clusterColors[cid], 'font-weight': '700' }, svg);
+    t.textContent = '★ C' + cid;
+  });
+
+  // Dots produk
+  const tooltip = document.getElementById('tooltipGlobal');
+  const svgRect = () => svg.getBoundingClientRect();
+
+  products.forEach(p => {
+    const cx  = scaleX(p.pca1);
+    const cy  = scaleY(p.pca2);
+    const cid = p.cluster.toString();
+    const dot = el('circle', {
+      cx, cy, r: 6,
+      fill: clusterColors[cid], opacity: 0.88,
+      stroke: '#fff', 'stroke-width': 1.2,
+      class: 'dot'
+    }, svg);
+
+    dot.addEventListener('mouseenter', () => {
+      dot.setAttribute('r', '9');
+      tooltip.style.display = 'block';
+      tooltip.innerHTML = `<strong>${p.name}</strong><br>
+        ${clusterIcons[cid]} ${clusterNames[cid]}<br>
+        💰 Rp ${p.price.toLocaleString('id-ID')} &nbsp; ⚖️ ${p.weight}g<br>
+        PCA1: ${p.pca1.toFixed(3)} &nbsp; PCA2: ${p.pca2.toFixed(3)}`;
+    });
+
+    // Label kode produk di samping titik
+    const label = el('text', {
+      x: cx + 8, y: cy + 4,
+      class: 'axis-label', 'font-size': '8',
+      fill: clusterColors[cid], opacity: 0.75
+    }, svg);
+    label.textContent = p.id;
+    dot.addEventListener('mousemove', e => {
+      const r = svgRect();
+      tooltip.style.left = (e.clientX - r.left + 14) + 'px';
+      tooltip.style.top  = (e.clientY - r.top  - 10) + 'px';
+    });
+    dot.addEventListener('mouseleave', () => {
+      dot.setAttribute('r', '6');
+      tooltip.style.display = 'none';
+    });
+  });
+
+  // Legend
+  const legendEl = document.getElementById('legend');
+  Object.entries(clusterNames).forEach(([cid, name]) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-dot" style="background:${clusterColors[cid]}"></div>${clusterIcons[cid]} ${name}`;
+    legendEl.appendChild(item);
+  });
+})();
+</script>
+{% endblock %}

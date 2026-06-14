@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+{% set active_page = "rekomendasi" %}
+{% block title %}Sistem Rekomendasi — Tuffero Patisserie{% endblock %}
+
+{% block extra_style %}
+/* ── STATS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  display: flex; align-items: center; gap: 16px;
+}
+.stat-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+.stat-val { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.stat-lbl { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+
+/* ── MAIN LAYOUT ── */
+.rekom-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── LEFT: PRODUCT LIST ── */
+.product-panel {
+  position: sticky;
+  top: calc(var(--nav-h) + 12px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.panel-header {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 10px; }
+.search-wrap {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.search-wrap input {
+  background: transparent; border: none; outline: none;
+  font-family: 'Inter', sans-serif; font-size: 0.85rem;
+  color: var(--text); width: 100%;
+}
+.search-wrap input::placeholder { color: var(--muted); }
+.filter-row { display: flex; gap: 6px; }
+.filter-select {
+  flex: 1; padding: 6px 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); font-family: 'Inter', sans-serif;
+  font-size: 0.75rem; color: var(--text); outline: none;
+  cursor: pointer;
+}
+.product-list {
+  list-style: none;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.product-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all .15s;
+}
+.product-item:hover { background: var(--bg3); border-color: var(--border); }
+.product-item.selected { background: rgba(79,70,229,0.07); border-color: rgba(79,70,229,0.3); }
+.pi-name { font-weight: 600; font-size: 0.83rem; line-height: 1.3; margin-bottom: 4px; }
+.pi-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pi-price { color: var(--accent); font-size: 0.75rem; font-weight: 700; }
+.pi-cat   { color: var(--muted); font-size: 0.72rem; }
+.pi-badge {
+  font-size: 0.65rem; font-weight: 600; padding: 1px 6px;
+  border-radius: 4px; background: #f3f4f6; color: var(--muted);
+}
+.pi-badge.ibcf { background: rgba(79,70,229,0.1); color: var(--accent); }
+.empty-list { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 0.85rem; }
+
+/* ── RIGHT: RESULT PANEL ── */
+.result-panel { display: flex; flex-direction: column; gap: 14px; }
+
+/* Placeholder saat belum pilih */
+.placeholder-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 60px 20px;
+  text-align: center;
+}
+.placeholder-icon { font-size: 3rem; margin-bottom: 14px; }
+.placeholder-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+.placeholder-sub { color: var(--muted); font-size: 0.88rem; }
+
+/* Selected product card */
+.selected-card {
+  background: linear-gradient(135deg, rgba(79,70,229,0.05), rgba(236,72,153,0.03));
+  border: 1px solid rgba(79,70,229,0.18);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex; gap: 16px; align-items: flex-start;
+}
+.selected-icon {
+  width: 64px; height: 64px; border-radius: 14px;
+  background: rgba(79,70,229,0.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; flex-shrink: 0;
+}
+.selected-name { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; }
+.selected-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.meta-chip {
+  padding: 4px 10px; border-radius: 99px;
+  background: #f3f4f6; border: 1px solid var(--border);
+  font-size: 0.75rem; color: var(--muted);
+}
+.meta-price { color: var(--accent); font-weight: 700; font-size: 1.05rem; }
+
+/* Rec section */
+.rec-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.rec-section-title { font-weight: 700; font-size: 1rem; }
+.rec-method-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 99px;
+  font-size: 0.75rem; font-weight: 600;
+}
+.rec-method-badge.ibcf { background: rgba(79,70,229,0.1); color: var(--accent); }
+.rec-method-badge.cluster { background: rgba(16,185,129,0.1); color: var(--green); }
+
+.rec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.rec-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: all .2s;
+  cursor: pointer;
+  position: relative; overflow: hidden;
+}
+.rec-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  opacity: 0; transition: opacity .2s;
+}
+.rec-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: rgba(79,70,229,0.2); }
+.rec-card:hover::before { opacity: 1; }
+.rc-icon { font-size: 1.5rem; margin-bottom: 10px; }
+.rc-name { font-weight: 700; font-size: 0.85rem; line-height: 1.3; margin-bottom: 8px; }
+.rc-price { color: var(--accent); font-weight: 700; font-size: 0.95rem; margin-bottom: 6px; }
+.rc-meta { display: flex; flex-direction: column; gap: 4px; }
+.rc-row { display: flex; align-items: center; justify-content: space-between; }
+.rc-label { color: var(--muted); font-size: 0.72rem; }
+.rc-val { font-size: 0.75rem; font-weight: 600; }
+.sim-bar-wrap { margin-top: 10px; }
+.sim-bar-bg { background: #f3f4f6; border-radius: 99px; height: 4px; }
+.sim-bar-fill { background: linear-gradient(90deg, var(--accent), var(--accent2)); height: 4px; border-radius: 99px; transition: width .5s ease; }
+.sim-label { display: flex; justify-content: space-between; margin-top: 4px; }
+.sim-text { font-size: 0.68rem; color: var(--muted); }
+.sim-val { font-size: 0.68rem; font-weight: 700; color: var(--accent); }
+
+/* Loading */
+.loading-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; padding: 60px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+{% endblock %}
+
+{% block content %}
+<div class="page fade-up">
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(79,70,229,0.1)">📦</div>
+      <div>
+        <div class="stat-val">{{ products|length }}</div>
+        <div class="stat-lbl">Total Produk</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(16,185,129,0.1)">👤</div>
+      <div>
+        <div class="stat-val" id="statUser">—</div>
+        <div class="stat-lbl">Total User</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(236,72,153,0.1)">⚡</div>
+      <div>
+        <div class="stat-val" id="statIbcf">—</div>
+        <div class="stat-lbl">Produk di Similarity</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:rgba(217,119,6,0.1)">🛒</div>
+      <div>
+        <div class="stat-val" id="statSold">—</div>
+        <div class="stat-lbl">Total Transaksi</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="rekom-layout">
+
+    <!-- LEFT: PRODUCT LIST -->
+    <div class="product-panel">
+      <div class="panel-header">
+        <div class="panel-title">🛍️ Pilih Produk</div>
+        <div class="search-wrap">
+          <span>🔍</span>
+          <input type="text" id="searchInput" placeholder="Cari nama produk..." oninput="filterProducts()">
+        </div>
+        <div class="filter-row">
+          <select class="filter-select" id="filterKategori" onchange="filterProducts()">
+            <option value="">Semua Kategori</option>
+            {% for cat in products | map(attribute='category') | unique | sort %}
+            <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+          <select class="filter-select" id="filterPlatform" onchange="filterProducts()">
+            <option value="">Semua Platform</option>
+            {% for p in products | map(attribute='platform') | unique | sort %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <ul class="product-list" id="productList"></ul>
+    </div>
+
+    <!-- RIGHT: RESULT -->
+    <div class="result-panel" id="resultPanel">
+      <div class="placeholder-card" id="placeholderCard">
+        <div class="placeholder-icon">👈</div>
+        <div class="placeholder-title">Pilih produk untuk melihat rekomendasi</div>
+        <div class="placeholder-sub">Cari atau pilih produk dari daftar di sebelah kiri,<br>sistem akan menampilkan produk yang paling relevan.</div>
+      </div>
+      <div id="resultContent" style="display:none;"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PRODUCTS = {{ products | tojson }};
+const CLUSTER_NAMES  = {{ cluster_names | tojson }};
+const CLUSTER_COLORS = {{ cluster_colors | tojson }};
+const CLUSTER_ICONS  = {{ cluster_icons | tojson }};
+
+// ── STATS ──
+const ibcfCount = PRODUCTS.filter(p => p.in_matrix).length;
+const totalSold = PRODUCTS.reduce((s,p) => s+p.sold, 0);
+document.getElementById('statIbcf').textContent = ibcfCount;
+document.getElementById('statSold').textContent = totalSold.toLocaleString('id-ID');
+fetch('/api/stats').then(r=>r.json()).then(d => {
+  document.getElementById('statUser').textContent = d.n_users?.toLocaleString('id-ID') || '—';
+}).catch(() => {});
+
+// ── PRODUCT LIST ──
+function fmt(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
+function getIcon(cluster) { return CLUSTER_ICONS[cluster] || '📦'; }
+
+let selectedId = null;
+
+function filterProducts() {
+  const q    = document.getElementById('searchInput').value.toLowerCase();
+  const kat  = document.getElementById('filterKategori').value;
+  const plat = document.getElementById('filterPlatform').value;
+  const filtered = PRODUCTS.filter(p =>
+    (!q    || p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)) &&
+    (!kat  || p.category === kat) &&
+    (!plat || p.platform === plat)
+  );
+  renderList(filtered);
+}
+
+function renderList(list) {
+  const ul = document.getElementById('productList');
+  if (!list.length) {
+    ul.innerHTML = '<div class="empty-list">Produk tidak ditemukan</div>';
+    return;
+  }
+  ul.innerHTML = list.map(p => `
+    <li class="product-item ${p.id === selectedId ? 'selected' : ''}"
+        id="item-${p.id.replace(/[^a-zA-Z0-9]/g,'_')}"
+        onclick="selectProduct('${p.id.replace(/'/g,"\\'")}')">
+      <div class="pi-name">${p.name}</div>
+      <div class="pi-meta">
+        <span class="pi-price">${fmt(p.price)}</span>
+        <span class="pi-cat">${p.category}</span>
+        ${p.in_matrix ? '<span class="pi-badge ibcf">IBCF</span>' : '<span class="pi-badge">Cold Start</span>'}
+      </div>
+    </li>
+  `).join('');
+}
+
+filterProducts();
+
+// ── SELECT PRODUCT ──
+async function selectProduct(id) {
+  selectedId = id;
+  filterProducts();
+
+  document.getElementById('placeholderCard').style.display = 'none';
+  const rc = document.getElementById('resultContent');
+  rc.style.display = 'block';
+  rc.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <div style="color:var(--muted);font-size:0.88rem">Mencari rekomendasi...</div>
+    </div>`;
+
+  const res  = await fetch('/api/rekomendasi/' + encodeURIComponent(id));
+  const data = await res.json();
+  renderResult(data);
+}
+
+function renderResult(data) {
+  const p    = data.product;
+  const recs = data.recommendations;
+  const method = recs[0]?.sumber || 'IBCF';
+  const clColor = CLUSTER_COLORS[p.cluster] || '#6b7280';
+  const clIcon  = CLUSTER_ICONS[p.cluster]  || '📦';
+  const clName  = CLUSTER_NAMES[p.cluster]  || 'Cluster ' + p.cluster;
+
+  const rc = document.getElementById('resultContent');
+  rc.innerHTML = `
+    <!-- Selected product -->
+    <div class="selected-card fade-up">
+      <div class="selected-icon">${clIcon}</div>
+      <div style="flex:1">
+        <div class="selected-name">${p.name}</div>
+        <div style="font-size:0.8rem;color:var(--muted)">${p.id}</div>
+        <div class="selected-meta">
+          <span class="meta-price">${fmt(p.price)}</span>
+          <span class="meta-chip">${p.category}</span>
+          <span class="meta-chip">${p.platform}</span>
+          <span class="meta-chip">⚖️ ${p.weight} kg</span>
+          <span class="cluster-badge" style="background:${clColor}20;color:${clColor}">${clIcon} ${clName}</span>
+          ${p.in_matrix
+            ? '<span class="rec-method-badge ibcf">⚡ IBCF</span>'
+            : '<span class="rec-method-badge cluster">🔮 Cold Start</span>'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="card fade-up" style="animation-delay:.1s">
+      <div class="rec-section-header">
+        <div class="rec-section-title">Produk Rekomendasi</div>
+        <span class="rec-method-badge ${method.toLowerCase()}">${method === 'IBCF' ? '⚡ IBCF' : '🔮 Berbasis Cluster'}</span>
+      </div>
+      ${recs.length === 0
+        ? '<div style="text-align:center;padding:32px;color:var(--muted)">Tidak ada rekomendasi tersedia.</div>'
+        : `<div class="rec-grid">
+            ${recs.map(r => {
+              const rc = CLUSTER_COLORS[r.cluster] || '#6b7280';
+              const ri = CLUSTER_ICONS[r.cluster]  || '📦';
+              const rn = CLUSTER_NAMES[r.cluster]  || 'Cluster ' + r.cluster;
+              const sim = r.similarity || 0;
+              return `
+              <div class="rec-card" onclick="selectProduct('${r.id.replace(/'/g,"\\'")}')">
+                <div class="rc-icon">${ri}</div>
+                <div class="rc-name">${r.name}</div>
+                <div class="rc-price">${fmt(r.price)}</div>
+                <div class="rc-meta">
+                  <div class="rc-row">
+                    <span class="rc-label">Kategori</span>
+                    <span class="rc-val">${r.category}</span>
+                  </div>
+                  <div class="rc-row">
+                    <span class="rc-label">Platform</span>
+                    <span class="rc-val">${r.platform}</span>
+                  </div>
+                  <div class="rc-row">
+                    <span class="rc-label">Berat</span>
+                    <span class="rc-val">${r.weight} kg</span>
+                  </div>
+                </div>
+                <div class="cluster-badge" style="background:${rc}20;color:${rc};margin-top:10px">${ri} ${rn}</div>
+                ${sim > 0 ? `
+                <div class="sim-bar-wrap">
+                  <div class="sim-bar-bg"><div class="sim-bar-fill" style="width:${(sim*100).toFixed(0)}%"></div></div>
+                  <div class="sim-label">
+                    <span class="sim-text">Similarity Score</span>
+                    <span class="sim-val">${sim.toFixed(4)}</span>
+                  </div>
+                </div>` : ''}
+              </div>`;
+            }).join('')}
+          </div>`}
+    </div>`;
+}
+</script>
+{% endblock %}

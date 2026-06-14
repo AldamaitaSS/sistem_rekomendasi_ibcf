@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% set active_page = "coldstart" %}
+{% block title %}Cold Start Item — RekoShop{% endblock %}
+
+{% block extra_style %}
+.cs-layout {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+/* FORM */
+.form-card { position: sticky; top: calc(var(--nav-h) + 20px); }
+.form-group { margin-bottom: 18px; }
+.form-label {
+  display: block;
+  font-size: 0.8rem; font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+.form-control {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  transition: border-color .18s;
+  outline: none;
+}
+.form-control:focus { border-color: rgba(79,70,229,0.5); }
+.form-control::placeholder { color: var(--muted); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-hint { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+/* RESULT */
+.result-area { display: flex; flex-direction: column; gap: 20px; }
+
+.cluster-result-card {
+  border-radius: var(--radius);
+  padding: 28px;
+  position: relative; overflow: hidden;
+  border-width: 1px; border-style: solid;
+}
+.cluster-result-card::after {
+  content: '';
+  position: absolute; right: -30px; top: -30px;
+  width: 160px; height: 160px; border-radius: 50%;
+  opacity: 0.07;
+}
+.cr-label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; opacity: 0.7; }
+.cr-cluster {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.8rem; font-weight: 800; margin-bottom: 6px;
+}
+.cr-desc { font-size: 0.9rem; opacity: 0.8; line-height: 1.5; }
+.cr-icon { font-size: 3rem; position: absolute; right: 28px; top: 28px; }
+
+.confidence-card { padding: 20px; }
+.conf-title { font-weight: 700; margin-bottom: 14px; font-size: 0.9rem; }
+.conf-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 10px;
+}
+.conf-label { font-size: 0.82rem; width: 120px; flex-shrink: 0; }
+.conf-bar {
+  flex: 1; height: 8px; border-radius: 4px;
+  background: #e5e7eb; overflow: hidden;
+}
+.conf-fill { height: 100%; border-radius: 4px; transition: width .7s cubic-bezier(.4,0,.2,1); }
+.conf-pct { font-size: 0.78rem; font-weight: 700; width: 38px; text-align: right; flex-shrink: 0; }
+
+.sil-card {
+  display: flex; align-items: center; gap: 20px;
+  padding: 20px;
+}
+.sil-score-wrap {
+  width: 80px; height: 80px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  border: 3px solid;
+  flex-shrink: 0;
+}
+.sil-score { font-family: 'Inter', sans-serif; font-size: 1.3rem; font-weight: 800; }
+.sil-label { font-size: 0.6rem; letter-spacing: 0.05em; opacity: 0.7; }
+.sil-info h4 { font-weight: 700; margin-bottom: 4px; }
+.sil-info p { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+.member-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  transition: border-color .18s;
+}
+.member-card:hover { border-color: rgba(0,0,0,0.12); }
+.mc-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 5px; line-height: 1.3; }
+.mc-price { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+.mc-sold { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+
+.empty-result {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80px 24px; text-align: center;
+}
+.empty-result .er-icon { font-size: 3.5rem; margin-bottom: 14px; opacity: 0.35; }
+.empty-result p { color: var(--muted); font-size: 0.9rem; }
+
+.process-steps {
+  display: flex; gap: 0; margin-bottom: 0;
+  flex-direction: column;
+}
+.step {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.step:last-child { border-bottom: none; }
+.step-num {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(79,70,229,0.08);
+  border: 1px solid rgba(79,70,229,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; color: var(--accent);
+}
+.step-text { font-size: 0.85rem; color: var(--muted); line-height: 1.5; padding-top: 4px; }
+.step-text strong { color: var(--text); }
+{% endblock %}
+
+{% block content %}
+<div class="page fade-up">
+  <div class="section-header">
+    <div class="section-badge">✨ K-Means Clustering</div>
+    <h1 class="section-title">Cold Start <span>Item</span></h1>
+    <p class="section-sub">Input produk baru yang belum pernah dibeli → sistem memprediksi cluster-nya lalu merekomendasikan produk sejenis.</p>
+  </div>
+
+  <div class="cs-layout">
+    <!-- LEFT: Form -->
+    <div class="form-card">
+      <div class="card">
+        <div class="panel-label" style="margin-bottom:18px; font-size:0.95rem;"><span style="color:var(--text)">Input Produk Baru</span></div>
+
+        <div class="form-group">
+          <label class="form-label">Nama Produk</label>
+          <input class="form-control" id="f-name" type="text" placeholder="cth. Brownies Coklat Premium" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kategori</label>
+          <select class="form-control" id="f-category">
+            <option value="">-- Pilih Kategori --</option>
+            {% for cat in categories %}
+            <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Harga (Rp)</label>
+            <input class="form-control" id="f-price" type="number" placeholder="cth. 85000" min="0" />
+            <div class="form-hint">dalam rupiah</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Berat (gram)</label>
+            <input class="form-control" id="f-weight" type="number" placeholder="cth. 500" min="0" />
+            <div class="form-hint">dalam gram</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Platform</label>
+          <select class="form-control" id="f-platform">
+            {% for p in platforms %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%; margin-top:4px;" onclick="predict()">
+          <span id="btnIcon">🔮</span> <span id="btnText">Prediksi Cluster</span>
+        </button>
+
+        <!-- Process steps -->
+        <div style="margin-top:22px; padding-top:18px; border-top:1px solid var(--border);">
+          <div style="font-size:0.75rem; font-weight:600; color:var(--muted); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:12px;">Alur Proses</div>
+          <div class="process-steps">
+            <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Input atribut</strong> produk baru (kategori, harga, berat)</div></div>
+            <div class="step"><div class="step-num">2</div><div class="step-text"><strong>K-Means</strong> menghitung jarak ke setiap centroid</div></div>
+            <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Assign</strong> ke cluster dengan jarak terpendek</div></div>
+            <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Rekomendasikan</strong> produk sesama cluster</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Result -->
+    <div class="result-area">
+      <!-- empty state -->
+      <div class="empty-result" id="csEmpty">
+        <div class="er-icon">✨</div>
+        <p>Isi form di sebelah kiri lalu klik<br><strong style="color:var(--text)">Prediksi Cluster</strong></p>
+      </div>
+
+      <!-- result sections -->
+      <div id="csResult" style="display:none; flex-direction:column; gap:20px;">
+        <!-- Cluster result -->
+        <div class="cluster-result-card fade-up" id="crcCard">
+          <div class="cr-icon" id="crcIcon">🍪</div>
+          <div class="cr-label">Produk Masuk ke</div>
+          <div class="cr-cluster" id="crcCluster">Cluster 0 — Nastar & Selai</div>
+          <div class="cr-desc" id="crcDesc">Produk baru ini memiliki karakteristik yang mirip dengan produk-produk dalam cluster ini berdasarkan kategori, harga, dan berat.</div>
+        </div>
+
+        <!-- Confidence -->
+        <div class="card confidence-card fade-up" style="animation-delay:.05s">
+          <div class="conf-title">📊 Tingkat Kepercayaan per Cluster</div>
+          <div id="confBars"></div>
+        </div>
+
+        <!-- Silhouette score -->
+        <div class="card sil-card fade-up" style="animation-delay:.1s">
+          <div class="sil-score-wrap" id="silCircle">
+            <div class="sil-score" id="silVal">—</div>
+            <div class="sil-label">SILHOUETTE</div>
+          </div>
+          <div class="sil-info">
+            <h4>Silhouette Score</h4>
+            <p>Mengukur seberapa baik produk ini cocok di clusternya dibanding cluster lain. Skor mendekati 1 berarti pengelompokan sangat baik. Benchmark literatur: <strong style="color:var(--text)">0.57–0.58</strong></p>
+          </div>
+        </div>
+
+        <!-- Cluster members / recommendations -->
+        <div class="fade-up" style="animation-delay:.15s">
+          <div class="panel-label" style="margin-bottom:14px; font-size:0.95rem;">
+            <span style="color:var(--text)">Rekomendasi dari Cluster</span>
+            <span class="panel-count" id="memberCount">—</span>
+          </div>
+          <div class="members-grid" id="membersGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+const clusterColors = {{ cluster_colors|tojson }};
+const clusterIcons  = {{ cluster_icons|tojson }};
+const clusterNames  = {{ cluster_names|tojson }};
+
+function fmt(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
+
+async function predict() {
+  const name     = document.getElementById('f-name').value.trim();
+  const category = document.getElementById('f-category').value;
+  const price    = document.getElementById('f-price').value;
+  const weight   = document.getElementById('f-weight').value;
+  const platform = document.getElementById('f-platform').value;
+
+  if (!name || !category || !price || !weight) {
+    alert('Harap lengkapi semua field terlebih dahulu.');
+    return;
+  }
+
+  const btn = document.querySelector('.btn-primary');
+  document.getElementById('btnIcon').textContent = '⏳';
+  document.getElementById('btnText').textContent = 'Memproses...';
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch('/api/coldstart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, category, price: parseFloat(price), weight: parseFloat(weight), platform })
+    });
+    const data = await res.json();
+    renderResult(data);
+  } finally {
+    document.getElementById('btnIcon').textContent = '🔮';
+    document.getElementById('btnText').textContent = 'Prediksi Cluster';
+    btn.disabled = false;
+  }
+}
+
+function renderResult(data) {
+  document.getElementById('csEmpty').style.display  = 'none';
+  const rc = document.getElementById('csResult');
+  rc.style.display = 'flex';
+
+  const cid   = data.cluster.toString();
+  const color = clusterColors[cid];
+  const icon  = clusterIcons[cid];
+  const name  = clusterNames[cid];
+
+  // Cluster result card
+  const card = document.getElementById('crcCard');
+  card.style.background    = color + '15';
+  card.style.borderColor   = color + '44';
+  card.style.color         = 'var(--text)';
+  card.querySelector('.cluster-result-card::after');
+  document.getElementById('crcIcon').textContent    = icon;
+  document.getElementById('crcCluster').textContent = `Cluster ${cid} — ${name}`;
+  document.getElementById('crcDesc').textContent    =
+    `Produk "${data.name}" termasuk dalam cluster ${name}. Pengelompokan ini berdasarkan kesamaan kategori, rentang harga, dan berat produk.`;
+
+  // Confidence bars
+  const confs = data.confidences;
+  document.getElementById('confBars').innerHTML = Object.entries(confs)
+    .sort((a,b) => b[1]-a[1])
+    .map(([ckey, pct]) => {
+      const cl = clusterColors[ckey];
+      const selected = ckey === cid;
+      return `<div class="conf-row">
+        <div class="conf-label" style="${selected?'color:var(--text);font-weight:700':''}">
+          ${clusterIcons[ckey]} ${clusterNames[ckey]}
+        </div>
+        <div class="conf-bar">
+          <div class="conf-fill" style="width:${pct}%;background:${cl}${selected?'':'88'}"></div>
+        </div>
+        <div class="conf-pct" style="color:${cl}">${pct}%</div>
+      </div>`;
+    }).join('');
+
+  // Silhouette
+  const sil = data.silhouette_score;
+  const silColor = sil >= 0.5 ? 'var(--green)' : sil >= 0.3 ? 'var(--gold)' : 'var(--red)';
+  const silCircle = document.getElementById('silCircle');
+  silCircle.style.borderColor = silColor;
+  document.getElementById('silVal').style.color = silColor;
+  document.getElementById('silVal').textContent  = sil.toFixed(4);
+
+  // Members
+  const members = data.cluster_members;
+  document.getElementById('memberCount').textContent = members.length + ' produk';
+  document.getElementById('membersGrid').innerHTML = members.map(m => `
+    <div class="member-card">
+      <div class="mc-name">${icon} ${m.name}</div>
+      <div class="mc-price">${fmt(m.price)}</div>
+      <div class="mc-sold">⬇ ${m.sold} terjual</div>
+    </div>`).join('');
+}
+</script>
+{% endblock %}

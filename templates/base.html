@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Tuffero Patisserie{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #f5f6fa;
+      --bg2:     #ffffff;
+      --bg3:     #eef0f6;
+      --surface: #ffffff;
+      --border:  rgba(0,0,0,0.08);
+      --text:    #1a1a2e;
+      --muted:   #6b7280;
+      --accent:  #4f46e5;
+      --accent2: #ec4899;
+      --gold:    #d97706;
+      --green:   #059669;
+      --red:     #dc2626;
+      --nav-h:   64px;
+      --radius:  14px;
+      --radius-sm: 8px;
+      --shadow:  0 4px 24px rgba(0,0,0,0.08);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      padding-top: var(--nav-h);
+    }
+
+    /* ── NAVBAR ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--nav-h);
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+      display: flex; align-items: center;
+      box-shadow: 0 1px 12px rgba(0,0,0,0.06);
+    }
+    .nav-inner {
+      max-width: 1280px; margin: 0 auto;
+      padding: 0 28px; width: 100%;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-logo {
+      font-weight: 800; font-size: 1.1rem;
+      color: var(--text); text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+      letter-spacing: -0.02em; margin-right: auto;
+    }
+    .nav-logo .logo-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .nav-links { display: flex; gap: 4px; list-style: none; }
+    .nav-links a {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 14px; border-radius: var(--radius-sm);
+      text-decoration: none; color: var(--muted);
+      font-size: 0.875rem; font-weight: 500;
+      transition: all .2s;
+    }
+    .nav-links a:hover { color: var(--text); background: rgba(0,0,0,0.04); }
+    .nav-links a.active { color: var(--accent); background: rgba(79,70,229,0.09); font-weight: 600; }
+    .nav-icon { font-size: 0.95rem; }
+
+    /* Upload button in nav */
+    .nav-upload-btn {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 16px; border-radius: var(--radius-sm);
+      background: var(--accent); color: #fff;
+      font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; border: none;
+      font-family: 'Inter', sans-serif;
+      transition: all .2s; margin-left: 8px;
+    }
+    .nav-upload-btn:hover { background: #4338ca; transform: translateY(-1px); }
+
+    /* ── PAGE ── */
+    .page { max-width: 1280px; margin: 0 auto; padding: 24px 28px 40px; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    /* ── BTN ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px; border-radius: var(--radius-sm);
+      font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.875rem;
+      cursor: pointer; border: none; transition: all .2s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 4px 16px rgba(79,70,229,0.25); }
+    .btn-primary:hover { background: #4338ca; transform: translateY(-1px); }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { background: var(--bg3); }
+    .btn-sm { padding: 7px 14px; font-size: 0.8rem; }
+
+    /* ── CLUSTER BADGE ── */
+    .cluster-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 99px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+
+    /* ── SPINNER ── */
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid rgba(79,70,229,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp .35s ease forwards; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+    /* ── UPLOAD MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 20px;
+      padding: 32px; width: 560px; max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      animation: fadeUp .25s ease;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .modal-title { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+    .modal-close {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--bg3); border: none; cursor: pointer;
+      font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+    }
+    .modal-close:hover { background: #e5e7eb; }
+    .drop-zone {
+      border: 2px dashed #d1d5db; border-radius: 12px;
+      padding: 28px 20px; text-align: center;
+      cursor: pointer; transition: all .2s; background: #fafafa;
+    }
+    .drop-zone:hover, .drop-zone.has-file { border-color: var(--accent); background: rgba(79,70,229,0.03); }
+    .drop-icon { font-size: 2rem; margin-bottom: 8px; }
+    .drop-text { font-size: 0.88rem; color: var(--muted); }
+    .modal-log {
+      background: #0f172a; color: #94a3b8;
+      font-family: monospace; font-size: 0.78rem;
+      padding: 14px; border-radius: 10px;
+      max-height: 200px; overflow-y: auto;
+      margin-top: 16px; display: none;
+    }
+    .modal-result {
+      margin-top: 16px; display: none;
+      background: #f0fdf4; border: 1px solid #bbf7d0;
+      border-radius: 10px; padding: 16px;
+    }
+    .modal-error {
+      margin-top: 16px; display: none;
+      background: #fef2f2; border: 1px solid #fecaca;
+      border-radius: 10px; padding: 14px;
+      font-size: 0.85rem; color: var(--red);
+    }
+
+    {% block extra_style %}{% endblock %}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <div class="logo-icon">🍰</div>
+        Tuffero Patisserie
+      </a>
+      <ul class="nav-links">
+        <li>
+          <a href="/rekomendasi" class="{% if active_page == 'rekomendasi' %}active{% endif %}">
+            <span class="nav-icon">⚡</span> Rekomendasi
+          </a>
+        </li>
+        <li>
+          <a href="/analisis" class="{% if active_page == 'analisis' %}active{% endif %}">
+            <span class="nav-icon">🔮</span> Clustering & Cold Start
+          </a>
+        </li>
+      </ul>
+      <button class="nav-upload-btn" onclick="openUpload()">
+        📤 Upload Data
+      </button>
+    </div>
+  </nav>
+
+  <!-- UPLOAD MODAL -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">📤 Upload Data Baru</div>
+        <button class="modal-close" onclick="closeUpload()">✕</button>
+      </div>
+
+      <div id="uploadForm">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div>
+            <div style="font-size:0.8rem;font-weight:600;margin-bottom:8px;color:var(--text)">🛒 TikTok Shop (.xlsx)</div>
+            <div class="drop-zone" id="dropTiktok" onclick="document.getElementById('fileTiktok').click()">
+              <div class="drop-icon">📁</div>
+              <div class="drop-text" id="txtTiktok">Klik untuk pilih file</div>
+            </div>
+            <input type="file" id="fileTiktok" accept=".xlsx,.xls" style="display:none" onchange="onFile('tiktok',this)">
+          </div>
+          <div>
+            <div style="font-size:0.8rem;font-weight:600;margin-bottom:8px;color:var(--text)">🛍️ Shopee (.xlsx)</div>
+            <div class="drop-zone" id="dropShopee" onclick="document.getElementById('fileShopee').click()">
+              <div class="drop-icon">📁</div>
+              <div class="drop-text" id="txtShopee">Klik untuk pilih file</div>
+            </div>
+            <input type="file" id="fileShopee" accept=".xlsx,.xls" style="display:none" onchange="onFile('shopee',this)">
+          </div>
+        </div>
+        <div id="uploadHint" style="text-align:center;font-size:0.78rem;color:var(--muted);margin-bottom:8px">
+          Minimal 1 file harus dipilih untuk memproses
+        </div>
+        <button class="btn btn-primary" id="btnProses" onclick="startUpload()" disabled style="width:100%;justify-content:center;opacity:0.5;cursor:not-allowed">
+          ⚙️ Proses & Perbarui Model
+        </button>
+      </div>
+
+      <div class="modal-log" id="modalLog"></div>
+      <div class="modal-result" id="modalResult"></div>
+      <div class="modal-error" id="modalError"></div>
+
+      <div id="resetWrap" style="display:none;margin-top:12px;text-align:center">
+        <button class="btn btn-outline btn-sm" onclick="resetUpload()">🔄 Upload Ulang</button>
+      </div>
+    </div>
+  </div>
+
+  {% block content %}{% endblock %}
+
+  <script>
+    // ── UPLOAD MODAL LOGIC ──
+    window._ftiktok = null; window._fshopee = null; window._pollIv = null; window._logCount = 0;
+
+    function openUpload()  { document.getElementById('uploadModal').classList.add('open'); }
+    function closeUpload() { document.getElementById('uploadModal').classList.remove('open'); }
+    document.getElementById('uploadModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('uploadModal')) closeUpload();
+    });
+
+    function onFile(platform, input) {
+      const f = input.files[0]; if (!f) return;
+      if (platform === 'tiktok') {
+        window._ftiktok = f;
+        document.getElementById('txtTiktok').textContent = '✅ ' + f.name;
+        document.getElementById('dropTiktok').classList.add('has-file');
+      } else {
+        window._fshopee = f;
+        document.getElementById('txtShopee').textContent = '✅ ' + f.name;
+        document.getElementById('dropShopee').classList.add('has-file');
+      }
+      const anyReady = window._ftiktok || window._fshopee;
+      const btn  = document.getElementById('btnProses');
+      const hint = document.getElementById('uploadHint');
+      btn.disabled = !anyReady;
+      btn.style.opacity = anyReady ? '1' : '0.5';
+      btn.style.cursor  = anyReady ? 'pointer' : 'not-allowed';
+      if (window._ftiktok && window._fshopee) {
+        hint.textContent = '✅ Kedua file siap diproses';
+        hint.style.color = 'var(--green)';
+      } else if (window._ftiktok) {
+        hint.textContent = '✅ TikTok Shop siap — tanpa Shopee';
+        hint.style.color = 'var(--green)';
+      } else {
+        hint.textContent = '✅ Shopee siap — tanpa TikTok Shop';
+        hint.style.color = 'var(--green)';
+      }
+    }
+
+    async function startUpload() {
+      if (!window._ftiktok && !window._fshopee) return;
+      document.getElementById('uploadForm').style.opacity = '0.4';
+      document.getElementById('uploadForm').style.pointerEvents = 'none';
+      const log = document.getElementById('modalLog');
+      log.style.display = 'block'; log.innerHTML = '';
+      document.getElementById('modalResult').style.display = 'none';
+      document.getElementById('modalError').style.display  = 'none';
+      window._logCount = 0;
+
+      const fd = new FormData();
+      if (window._ftiktok) fd.append('tiktok', window._ftiktok);
+      if (window._fshopee) fd.append('shopee', window._fshopee);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const d   = await res.json();
+      if (!res.ok) { showUploadError(d.error); return; }
+      window._pollIv = setInterval(pollUpload, 1500);
+    }
+
+    async function pollUpload() {
+      const d = await (await fetch('/api/upload/status')).json();
+      const log = document.getElementById('modalLog');
+      d.logs.slice(window._logCount).forEach(msg => {
+        const line = document.createElement('div'); line.textContent = msg; log.appendChild(line);
+      });
+      window._logCount = d.logs.length;
+      log.scrollTop = log.scrollHeight;
+      if (!d.running) {
+        clearInterval(window._pollIv);
+        if (d.error) showUploadError(d.error);
+        else showUploadResult(d.result);
+      }
+    }
+
+    function showUploadResult(r) {
+      const el = document.getElementById('modalResult');
+      el.style.display = 'block';
+      el.innerHTML = `<div style="font-weight:700;color:#15803d;margin-bottom:10px">✅ Model berhasil diperbarui!</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">
+          <div style="background:#fff;border-radius:8px;padding:10px"><div style="font-size:1.3rem;font-weight:800">${r.n_items}</div><div style="font-size:0.72rem;color:var(--muted)">Produk</div></div>
+          <div style="background:#fff;border-radius:8px;padding:10px"><div style="font-size:1.3rem;font-weight:800">${r.n_users}</div><div style="font-size:0.72rem;color:var(--muted)">User</div></div>
+          <div style="background:#fff;border-radius:8px;padding:10px"><div style="font-size:1.3rem;font-weight:800">${r.n_clusters}</div><div style="font-size:0.72rem;color:var(--muted)">Cluster</div></div>
+          <div style="background:#fff;border-radius:8px;padding:10px"><div style="font-size:1.3rem;font-weight:800">${r.silhouette}</div><div style="font-size:0.72rem;color:var(--muted)">Silhouette</div></div>
+        </div>`;
+      document.getElementById('resetWrap').style.display = 'block';
+      setTimeout(() => location.reload(), 3000);
+    }
+
+    function showUploadError(msg) {
+      const el = document.getElementById('modalError');
+      el.style.display = 'block'; el.textContent = '❌ ' + msg;
+      document.getElementById('uploadForm').style.opacity = '1';
+      document.getElementById('uploadForm').style.pointerEvents = 'auto';
+      document.getElementById('resetWrap').style.display = 'block';
+    }
+
+    function resetUpload() {
+      window._ftiktok = null; window._fshopee = null; window._logCount = 0;
+      ['fileTiktok','fileShopee'].forEach(id => document.getElementById(id).value = '');
+      ['txtTiktok','txtShopee'].forEach(id => document.getElementById(id).textContent = 'Klik untuk pilih file');
+      ['dropTiktok','dropShopee'].forEach(id => document.getElementById(id).classList.remove('has-file'));
+      document.getElementById('btnProses').disabled = true;
+      document.getElementById('btnProses').style.opacity = '0.5';
+      document.getElementById('btnProses').style.cursor  = 'not-allowed';
+      document.getElementById('uploadHint').textContent  = 'Minimal 1 file harus dipilih untuk memproses';
+      document.getElementById('uploadHint').style.color  = 'var(--muted)';
+      document.getElementById('uploadForm').style.opacity = '1';
+      document.getElementById('uploadForm').style.pointerEvents = 'auto';
+      document.getElementById('modalLog').style.display    = 'none';
+      document.getElementById('modalResult').style.display = 'none';
+      document.getElementById('modalError').style.display  = 'none';
+      document.getElementById('resetWrap').style.display   = 'none';
+    }
+  </script>
+  {% block extra_script %}{% endblock %}
+</body>
+</html>
