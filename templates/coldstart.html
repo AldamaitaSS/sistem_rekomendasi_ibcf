@@ -108,6 +108,34 @@
 .mc-price { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
 .mc-sold { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
 
+/* SUMMARY CARD */
+.summary-card {
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  line-height: 1.8;
+}
+.summary-card p {
+  font-size: 0.92rem;
+  color: var(--text);
+  margin: 0;
+}
+.summary-card .sum-highlight {
+  font-weight: 700;
+  color: var(--accent);
+}
+.summary-stats {
+  display: flex;
+  gap: 24px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.sum-stat { display: flex; flex-direction: column; gap: 2px; }
+.sum-stat-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.sum-stat-val { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+
 .empty-result {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 80px 24px; text-align: center;
@@ -219,6 +247,21 @@
           <div class="cr-desc" id="crcDesc">Produk baru ini memiliki karakteristik yang mirip dengan produk-produk dalam cluster ini berdasarkan kategori, harga, dan berat.</div>
         </div>
 
+        <!-- Kesimpulan -->
+        <div class="summary-card fade-up" id="summaryCard" style="animation-delay:.04s">
+          <p id="summaryText">—</p>
+          <div class="summary-stats">
+            <div class="sum-stat">
+              <span class="sum-stat-label">Jumlah Produk</span>
+              <span class="sum-stat-val" id="sumJumlah">—</span>
+            </div>
+            <div class="sum-stat">
+              <span class="sum-stat-label">Rata-rata Harga</span>
+              <span class="sum-stat-val" id="sumHarga">—</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Confidence -->
         <div class="card confidence-card fade-up" style="animation-delay:.05s">
           <div class="conf-title">📊 Tingkat Kepercayaan per Cluster</div>
@@ -311,6 +354,19 @@ function renderResult(data) {
   document.getElementById('crcCluster').textContent = `Cluster ${cid} — ${name}`;
   document.getElementById('crcDesc').textContent    =
     `Produk "${data.name}" termasuk dalam cluster ${name}. Pengelompokan ini berdasarkan kesamaan kategori, rentang harga, dan berat produk.`;
+
+  // Kesimpulan
+  const members  = data.cluster_members;
+  const jumlah   = members.length;
+  const avgHarga = members.reduce((s, m) => s + m.price, 0) / jumlah;
+  document.getElementById('sumJumlah').textContent = jumlah + ' produk';
+  document.getElementById('sumHarga').textContent  = fmt(Math.round(avgHarga));
+  document.getElementById('summaryText').innerHTML =
+    `Produk <span class="sum-highlight">"${data.name}"</span> diprediksi masuk ke dalam ` +
+    `<span class="sum-highlight">Cluster ${cid} — ${name}</span>. ` +
+    `Cluster ini terdiri dari <span class="sum-highlight">${jumlah} produk</span> dengan ` +
+    `rata-rata harga <span class="sum-highlight">${fmt(Math.round(avgHarga))}</span>. ` +
+    `Produk ini direkomendasikan untuk dipasarkan bersama produk-produk lain dalam cluster yang sama.`;
 
   // Confidence bars
   const confs = data.confidences;

@@ -25,26 +25,57 @@ df_item          = pickle.load(open('models/df_item.pkl',           'rb'))
 kmeans           = pickle.load(open('models/kmeans.pkl',            'rb'))
 user_item_matrix = pickle.load(open('models/user_item_matrix.pkl',  'rb'))
 centroids_pca    = pickle.load(open('models/centroids_pca.pkl',     'rb'))  # shape (n_clusters, 2)
+
+# Silhouette score ASLI (dihitung dari item_features penuh saat training di notebook/retrain.py),
+# BUKAN dihitung ulang dari pca1/pca2 -- karena silhouette di ruang 2D hasil reduksi dimensi
+# akan berbeda nilainya dari silhouette di ruang fitur asli, dan akan salah jika ditampilkan
+# sebagai "skor evaluasi sistem".
+try:
+    CURRENT_SILHOUETTE = pickle.load(open('models/silhouette.pkl', 'rb'))
+except FileNotFoundError:
+    CURRENT_SILHOUETTE = None
+    print("⚠️  models/silhouette.pkl tidak ditemukan -- silhouette akan ditampilkan kosong.")
+    print("    Tambahkan baris export berikut di notebook sebelum download:")
+    print("    pickle.dump(sil_score, open('silhouette.pkl', 'wb'))")
 print("Model loaded!")
 
 # ── CLUSTER METADATA ───────────────────────────────────────────────────────────
-PALETTE = ["#f59e0b", "#8b5cf6", "#ef4444", "#10b981", "#3b82f6", "#ec4899"]
-ICONS   = ["🍪", "🍫", "🥨", "🎂", "🌶️", "🧁"]
+# Palet & ikon disiapkan untuk k=2..10 (sesuai k_range di retrain.py),
+# supaya tidak ada warna/ikon yang berulang antar cluster.
+PALETTE = [
+    "#f59e0b", "#8b5cf6", "#ef4444", "#10b981", "#3b82f6",
+    "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
+]
+ICONS = ["🍪", "🍫", "🥨", "🎂", "🌶️", "🧁", "🍩", "🥖", "🍯", "🧀"]
 
 CLUSTER_NAMES  = {}
 CLUSTER_COLORS = {}
 CLUSTER_ICONS  = {}
 
+# Hitung dulu kategori dominan tiap cluster, lalu disambiguasi jika ada nama yang sama
+_dominant_kategori = {}
 for cid in sorted(df_item['cluster'].unique()):
     cid_int = int(cid)
-    CLUSTER_COLORS[cid_int] = PALETTE[cid_int % len(PALETTE)]
-    CLUSTER_ICONS[cid_int]  = ICONS[cid_int % len(ICONS)]
-    # Nama cluster = kategori terbanyak di cluster tsb
     members = df_item[df_item['cluster'] == cid]
-    if 'kategori' in members.columns and len(members) > 0:
-        CLUSTER_NAMES[cid_int] = members['kategori'].value_counts().index[0]
+    if 'kategori' in members.columns and len(members) > 0 and members['kategori'].notna().any():
+        _dominant_kategori[cid_int] = members['kategori'].value_counts().index[0]
     else:
-        CLUSTER_NAMES[cid_int] = f"Cluster {cid_int}"
+        _dominant_kategori[cid_int] = f"Cluster {cid_int}"
+
+# Disambiguasi: kalau ada nama yang dipakai >1 cluster, tambahkan angka urut (1), (2), dst
+from collections import Counter
+_name_counts = Counter(_dominant_kategori.values())
+_name_seen    = {}
+for cid_int, nama in _dominant_kategori.items():
+    color = PALETTE[cid_int % len(PALETTE)]
+    icon  = ICONS[cid_int % len(ICONS)]
+    CLUSTER_COLORS[cid_int] = color
+    CLUSTER_ICONS[cid_int]  = icon
+    if _name_counts[nama] > 1:
+        _name_seen[nama] = _name_seen.get(nama, 0) + 1
+        CLUSTER_NAMES[cid_int] = f"{nama} ({_name_seen[nama]})"
+    else:
+        CLUSTER_NAMES[cid_int] = nama
 
 # ── BUILD PRODUCTS LIST ────────────────────────────────────────────────────────
 def build_products():
@@ -81,7 +112,7 @@ CATEGORIES = sorted(set(p["category"] for p in PRODUCTS))
 PLATFORMS  = sorted(set(p["platform"] for p in PRODUCTS)) or ["TikTok Shop", "Shopee"]
 
 # ── IBCF RECOMMENDATION ────────────────────────────────────────────────────────
-def get_recommendations(product_id, top_n=5):
+def get_recommendations(product_id, top_n=3):
     if product_id not in similarity_df.columns:
         prod = next((p for p in PRODUCTS if p["id"] == product_id), None)
         if not prod:
@@ -167,23 +198,23 @@ def analisis():
         avg_price  = round(sum(p["price"]  for p in members) / len(members)) if members else 0
         avg_weight = round(sum(p["weight"] for p in members) / len(members)) if members else 0
         total_sold = sum(p["sold"] for p in members)
+        # Sertakan nama produk lengkap di setiap member
+        members_detail = [{"name": p["name"], "price": p["price"], "sold": p["sold"]} for p in members]
         summary[cid] = {"name": cname, "count": len(members),
             "avg_price": avg_price, "avg_weight": avg_weight,
-            "total_sold": total_sold, "members": members,
+            "total_sold": total_sold, "members": members_detail,
             "color": CLUSTER_COLORS[cid], "icon": CLUSTER_ICONS[cid]}
     return render_template("analisis.html",
         products=PRODUCTS, summary=summary,
-        silhouette=0.3094,
-        categories=CATEGORIES, platforms=PLATFORMS,
+        silhouette=round(CURRENT_SILHOUETTE, 4) if CURRENT_SILHOUETTE is not None else None,
         cluster_names=CLUSTER_NAMES, cluster_colors=CLUSTER_COLORS,
-        cluster_icons=CLUSTER_ICONS,
-        centroids_pca=centroids_pca.tolist())
+        cluster_icons=CLUSTER_ICONS)
 
 @app.route("/coldstart")
 def coldstart():
-    return render_template("analisis.html", categories=CATEGORIES, platforms=PLATFORMS,
-        cluster_names=CLUSTER_NAMES, cluster_colors=CLUSTER_COLORS, cluster_icons=CLUSTER_ICONS,
-        products=PRODUCTS, summary={}, silhouette=0.3094, centroids_pca=centroids_pca.tolist())
+    # Redirect ke halaman clustering (cold start tidak digunakan)
+    from flask import redirect, url_for
+    return redirect(url_for("analisis"))
 
 @app.route("/api/stats")
 def api_stats():
@@ -207,7 +238,7 @@ def api_coldstart():
         "cluster_color": CLUSTER_COLORS.get(cluster, "#666"),
         "cluster_icon":  CLUSTER_ICONS.get(cluster, "📦"),
         "confidences": confidences,
-        "silhouette_score": 0.3094,
+        "silhouette_score": round(CURRENT_SILHOUETTE, 4) if CURRENT_SILHOUETTE is not None else None,
         "cluster_members": members,
         "cluster_names": CLUSTER_NAMES, "cluster_colors": CLUSTER_COLORS, "cluster_icons": CLUSTER_ICONS,
     })
@@ -256,7 +287,7 @@ def api_upload():
     def background_retrain():
         global retrain_status, similarity_df, df_item, kmeans, user_item_matrix
         global centroids_pca, PRODUCTS, CATEGORIES, PLATFORMS
-        global CLUSTER_NAMES, CLUSTER_COLORS, CLUSTER_ICONS
+        global CLUSTER_NAMES, CLUSTER_COLORS, CLUSTER_ICONS, CURRENT_SILHOUETTE
 
         def log_fn(msg):
             retrain_status["logs"].append(msg)
@@ -334,16 +365,34 @@ def api_upload():
             user_item_matrix = pickle.load(open("models/user_item_matrix.pkl", "rb"))
             centroids_pca    = pickle.load(open("models/centroids_pca.pkl",    "rb"))
 
+            # Silhouette ASLI dari hasil training penuh (item_features), bukan dari pca1/pca2.
+            # run_retrain() mengembalikan ini di dalam `result` (lihat retrain.py).
+            CURRENT_SILHOUETTE = result.get("silhouette")
+            pickle.dump(CURRENT_SILHOUETTE, open("models/silhouette.pkl", "wb"))
+
+            # Re-generate metadata cluster (nama/warna/ikon) dengan logika yang SAMA
+            # seperti saat startup -- termasuk disambiguasi nama yang duplikat.
             CLUSTER_NAMES.clear(); CLUSTER_COLORS.clear(); CLUSTER_ICONS.clear()
+            _dominant_kategori = {}
             for cid in sorted(df_item["cluster"].unique()):
                 cid_int = int(cid)
+                members = df_item[df_item["cluster"] == cid]
+                if "kategori" in members.columns and len(members) > 0 and members["kategori"].notna().any():
+                    _dominant_kategori[cid_int] = members["kategori"].value_counts().index[0]
+                else:
+                    _dominant_kategori[cid_int] = f"Cluster {cid_int}"
+
+            from collections import Counter as _Counter
+            _name_counts = _Counter(_dominant_kategori.values())
+            _name_seen = {}
+            for cid_int, nama in _dominant_kategori.items():
                 CLUSTER_COLORS[cid_int] = PALETTE[cid_int % len(PALETTE)]
                 CLUSTER_ICONS[cid_int]  = ICONS[cid_int % len(ICONS)]
-                members = df_item[df_item["cluster"] == cid]
-                if "kategori" in members.columns and len(members) > 0:
-                    CLUSTER_NAMES[cid_int] = members["kategori"].value_counts().index[0]
+                if _name_counts[nama] > 1:
+                    _name_seen[nama] = _name_seen.get(nama, 0) + 1
+                    CLUSTER_NAMES[cid_int] = f"{nama} ({_name_seen[nama]})"
                 else:
-                    CLUSTER_NAMES[cid_int] = f"Cluster {cid_int}"
+                    CLUSTER_NAMES[cid_int] = nama
 
             PRODUCTS[:]  = build_products()
             CATEGORIES[:] = sorted(set(p["category"] for p in PRODUCTS))

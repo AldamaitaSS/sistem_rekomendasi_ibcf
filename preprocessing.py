@@ -99,31 +99,17 @@ def prepare_data(df_clean):
     )
     df['kode_produk'] = df['kode_produk'].astype(str).str.strip().str.upper()
 
-    mapping_kategori = (
-        df[df['kategori'].notna()].groupby('kode_produk')['kategori'].first().to_dict()
-    )
-    df['kategori'] = df.apply(
-        lambda row: mapping_kategori.get(row['kode_produk'], row['kategori'])
-        if pd.isna(row['kategori']) else row['kategori'], axis=1
-    )
-
     def assign_kategori(row):
         if pd.notna(row['kategori']) and str(row['kategori']).strip() != '':
             return row['kategori']
         nama = str(row['nama_produk']).lower()
-        if any(k in nama for k in ['brownies', 'brownie', 'fudgy', 'bites', 'dubai', 'kunafa', 'pistachio', 'pie', 'tart']):
+        if any(k in nama for k in ['brownie', 'brownies', 'pie', 'tart', 'croissant', 'cromboloni', 'macaron', 'dubai']):
             return 'Kue & Pai'
-        elif any(k in nama for k in ['macaron', 'macaroon', 'rice crispy', 'crumbs', 'remahan']):
-            return 'Kue Camilan & Roti Pastri'
-        elif any(k in nama for k in ['bola', 'bola susu', 'snack', 'camilan']):
-            return 'Makanan Ringan Kering'
-        elif any(k in nama for k in ['nastar', 'kukis', 'cookies', 'wisman', 'wijsman', 'sultan', 'apel', 'bundling nastar', 'paket nastar', 'premium']):
-            return 'Kue Kering'
-        elif any(k in nama for k in ['pia', 'meringue', 'kue busa', 'choco chips', 'chocopia', 'biskuit', 'wafer', 'lumer', 'filling', 'classic', 'homemade']):
+        elif any(k in nama for k in ['nastar', 'cookies', 'kukis', 'pia', 'wafer', 'chocopia', 'bola susu']):
             return 'Biskuit, Kue & Wafer'
-        elif any(k in nama for k in ['sambal', 'bumbu', 'terasi', 'sachet', 'pouch', 'madura', 'bebek', 'pasta', 'saus']):
+        elif any(k in nama for k in ['sambal', 'bumbu', 'terasi', 'pasta', 'saus']):
             return 'Kit Pasta & Bumbu Masak'
-        elif any(k in nama for k in ['selai', 'nanas', 'olesan', 'jam', 'spread']):
+        elif any(k in nama for k in ['selai', 'spread', 'jam']):
             return 'Selai, Saus, & Olesan'
         else:
             return row['kategori']
@@ -156,16 +142,14 @@ def build_user_item_matrix(df_prep, log_fn=None):
         .agg(quantity=('quantity','sum'), tanggal_terakhir=('tanggal_pesanan','max'))
     )
     user_filter = df_transaksi.groupby('id_user')['kode_produk'].nunique()
-    # Turunkan threshold otomatis jika data kecil
-    for min_item in [3, 2, 1]:
-        user_valid = user_filter[user_filter >= min_item].index
-        if len(user_valid) > 0:
-            if min_item < 3:
-                log_fn(f"    ⚠️ Filter diturunkan ke ≥{min_item} produk/user karena data terbatas")
-            break
+    # Sesuai notebook: filter user yang beli minimal 2 produk berbeda
+    user_valid = user_filter[user_filter >= 2].index
+    if len(user_valid) == 0:
+        # fallback hanya kalau data benar-benar terlalu sedikit (semua user cuma 1 produk)
+        user_valid = user_filter[user_filter >= 1].index
+        log_fn("    ⚠️ Filter diturunkan ke ≥1 produk/user karena data terbatas")
     df_transaksi = df_transaksi[df_transaksi['id_user'].isin(user_valid)]
-    df_transaksi['interaction'] = np.log1p(df_transaksi['quantity'])
-
+    # Notebook baru: tidak pakai log1p, langsung pakai quantity asli
     train_list, test_list = [], []
     for user_id, group in df_transaksi.groupby('id_user'):
         if len(group) < 2:
@@ -182,7 +166,7 @@ def build_user_item_matrix(df_prep, log_fn=None):
     test_data  = pd.concat(test_list, ignore_index=True) if test_list else pd.DataFrame()
 
     user_item_matrix = train_data.pivot_table(
-        index='id_user', columns='kode_produk', values='interaction', fill_value=0
+        index='id_user', columns='kode_produk', values='quantity', fill_value=0
     )
     return user_item_matrix, train_data, test_data
 
@@ -194,7 +178,6 @@ def build_item_features(df_prep):
     )
     df_item['berat']    = df_item['berat'].fillna(df_item['berat'].median())
     df_item['harga']    = df_item['harga'].fillna(df_item['harga'].median())
-    df_item['kategori'] = df_item['kategori'].fillna('Lainnya')
 
     tfidf = TfidfVectorizer()
     nama_produk_features = tfidf.fit_transform(df_item['nama_produk'])

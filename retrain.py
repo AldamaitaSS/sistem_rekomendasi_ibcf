@@ -1,26 +1,48 @@
-"""
-retrain.py
-Replika pipeline Colab Tahap 12–19
-K-Means clustering + IBCF similarity + evaluasi → simpan pkl baru
-"""
-
 import pickle
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-def train_kmeans(item_features, df_item, n_clusters=6, log_fn=None):
-    """Tahap 12: K-Means clustering."""
+def pilih_k_terbaik(k_range, sil_scores, threshold=0.01):
+    k_list = list(k_range)
+    best_idx = sil_scores.index(max(sil_scores))
+    return k_list[best_idx]
+
+
+def train_kmeans(item_features, df_item, n_clusters=None, log_fn=None, threshold=0.01):
+    """Tahap 12-13: Pilih k optimal lalu fit K-Means clustering."""
     if log_fn is None: log_fn = print
     n_samples = item_features.shape[0]
-    if n_clusters > n_samples:
-        n_clusters = max(2, n_samples)
-        log_fn(f"    ⚠️ Jumlah cluster disesuaikan ke k={n_clusters} karena produk hanya {n_samples}")
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+
+    # Tentukan range k yang aman (max 10, min 2, tidak melebihi n_samples)
+    k_max   = min(10, n_samples - 1)
+    k_range = range(2, k_max + 1)
+
+    if n_clusters is None:
+        # Otomatis pilih k terbaik (seperti notebook)
+        log_fn(f"    🔍 Menghitung silhouette untuk k=2..{k_max}...")
+        log_fn(f"    📦 Jumlah produk (n_samples): {n_samples}")
+        sil_scores = []
+        for k in k_range:
+            km_temp     = KMeans(n_clusters=k, random_state=42, n_init=10)
+            labels_temp = km_temp.fit_predict(item_features)
+            score       = silhouette_score(item_features, labels_temp)
+            sil_scores.append(score)
+            log_fn(f"    k={k} → silhouette={round(score, 4)}")
+
+        log_fn(f"    📊 Semua skor: {[round(s,4) for s in sil_scores]}")
+        best_k = pilih_k_terbaik(k_range, sil_scores)
+        log_fn(f"    ✅ K optimal dipilih secara dinamis: k={best_k}")
+    else:
+        # Pakai k yang diminta, tapi pastikan tidak melebihi n_samples
+        best_k = max(2, min(n_clusters, n_samples - 1))
+        if best_k != n_clusters:
+            log_fn(f"    ⚠️ Jumlah cluster disesuaikan ke k={best_k} karena produk hanya {n_samples}")
+
+    kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10)
     df_item = df_item.copy()
     df_item['cluster'] = kmeans.fit_predict(item_features)
 
@@ -29,16 +51,15 @@ def train_kmeans(item_features, df_item, n_clusters=6, log_fn=None):
     sil_score = silhouette_score(item_features, labels)
     inertia   = kmeans.inertia_
 
-    # PCA untuk visualisasi
-    item_dense = item_features.toarray()
-    pca        = PCA(n_components=2, random_state=42)
-    pca_result = pca.fit_transform(item_dense)
-    df_item['pca1'] = pca_result[:, 0]
-    df_item['pca2'] = pca_result[:, 1]
+    # Reduksi dimensi pakai TruncatedSVD (sparse-safe, seperti notebook baru)
+    from sklearn.decomposition import TruncatedSVD
+    svd        = TruncatedSVD(n_components=2, random_state=42)
+    X_2d       = svd.fit_transform(item_features)
+    df_item['pca1'] = X_2d[:, 0]
+    df_item['pca2'] = X_2d[:, 1]
 
-    # Centroid PCA
     centroids_pca = (
-        df_item.groupby('cluster')[['pca1','pca2']].mean()
+        df_item.groupby('cluster')[['pca1', 'pca2']].mean()
         .sort_index().values
     )
 
@@ -61,7 +82,7 @@ def train_ibcf(user_item_matrix):
     return similarity_df, predicted_scores
 
 
-def evaluate_model(test_data, predicted_scores, train_matrix, top_n=5):
+def evaluate_model(test_data, predicted_scores, train_matrix, top_n=3):
     """Tahap 18–19: Evaluasi Leave-One-Out."""
     precision_list, recall_list, f1_list = [], [], []
 
@@ -102,19 +123,7 @@ def evaluate_model(test_data, predicted_scores, train_matrix, top_n=5):
     }
 
 
-def run_retrain(prep_result, models_dir="models", n_clusters=6, log_fn=None):
-    """
-    Jalankan full training dari hasil preprocessing, lalu simpan pkl.
-    
-    Parameters:
-        prep_result (dict) : output dari preprocessing.run_preprocessing()
-        models_dir (str)   : folder tujuan simpan pkl
-        n_clusters (int)   : jumlah cluster K-Means
-        log_fn (callable)  : fungsi logging
-
-    Returns:
-        dict berisi: silhouette, inertia, eval_results, n_items, n_users
-    """
+def run_retrain(prep_result, models_dir="models", n_clusters=None, threshold=0.01, log_fn=None):
     import os
     os.makedirs(models_dir, exist_ok=True)
     if log_fn is None:
@@ -126,11 +135,12 @@ def run_retrain(prep_result, models_dir="models", n_clusters=6, log_fn=None):
     train_data       = prep_result["train_data"]
     test_data        = prep_result["test_data"]
 
-    log_fn(f"🔵 [1/4] K-Means clustering (k={n_clusters})...")
+    mode_txt = f"k={n_clusters}" if n_clusters else "k otomatis (dinamis)"
+    log_fn(f"🔵 [1/4] K-Means clustering ({mode_txt})...")
     kmeans, df_item, sil_score, inertia, centroids_pca = train_kmeans(
-        item_features, df_item, n_clusters=n_clusters, log_fn=log_fn
+        item_features, df_item, n_clusters=n_clusters, log_fn=log_fn, threshold=threshold
     )
-    log_fn(f"    → Silhouette: {round(sil_score, 4)} | Inertia: {round(inertia, 2)}")
+    log_fn(f"    → K terpilih: {df_item['cluster'].nunique()} | Silhouette: {round(sil_score, 4)} | Inertia: {round(inertia, 2)}")
 
     log_fn("🔵 [2/4] IBCF cosine similarity...")
     similarity_df, predicted_scores = train_ibcf(user_item_matrix)
@@ -157,5 +167,5 @@ def run_retrain(prep_result, models_dir="models", n_clusters=6, log_fn=None):
         "eval_results": eval_results,
         "n_items"     : len(df_item),
         "n_users"     : user_item_matrix.shape[0],
-        "n_clusters"  : n_clusters,
+        "n_clusters"  : df_item['cluster'].nunique(),
     }

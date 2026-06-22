@@ -1,529 +1,326 @@
 {% extends "base.html" %}
 {% set active_page = "analisis" %}
-{% block title %}Clustering & Cold Start — Tuffero Patisserie{% endblock %}
+{% block title %}Clustering{% endblock %}
 
 {% block extra_style %}
-/* ── TABS ── */
-.tab-bar {
-  display: flex; gap: 4px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 5px;
-  margin-bottom: 24px;
-  width: fit-content;
-}
-.tab-btn {
-  padding: 9px 22px; border-radius: 10px;
-  font-weight: 600; font-size: 0.875rem;
-  cursor: pointer; border: none;
-  background: transparent; color: var(--muted);
-  font-family: 'Inter', sans-serif;
-  transition: all .2s;
-}
-.tab-btn.active {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
+.page-header { margin-bottom: 28px; }
+.page-header h1 { font-size:1.6rem; font-weight:800; letter-spacing:-0.02em; margin-bottom:6px; }
+.page-header p { color:var(--muted); font-size:0.9rem; }
 
-/* ── CLUSTERING TAB ── */
-.cluster-stats {
+/* STATS ROW */
+.stats-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
-.cs-card {
+.stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 20px;
+  padding: 20px 22px;
+  position: relative; overflow: hidden;
   display: flex; align-items: center; gap: 14px;
 }
-.cs-icon { font-size: 1.6rem; flex-shrink: 0; }
-.cs-val { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; }
-.cs-lbl { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+.stat-icon { font-size: 1.8rem; flex-shrink: 0; }
+.stat-val { font-size: 1.6rem; font-weight: 800; letter-spacing:-0.03em; line-height:1; }
+.stat-lbl { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+.stat-bar { position:absolute; top:0; left:0; bottom:0; width:3px; border-radius:2px 0 0 2px; }
 
+/* SILHOUETTE HERO */
+.sil-hero {
+  display: flex; align-items: center; gap: 28px;
+  background: linear-gradient(135deg, rgba(79,70,229,0.06), rgba(16,185,129,0.03));
+  border: 1px solid rgba(79,70,229,0.18);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin-bottom: 28px;
+}
+.sil-big { font-size: 3.5rem; font-weight: 800; color: var(--green); flex-shrink:0; line-height:1; }
+.sil-right h3 { font-size:1rem; font-weight:700; margin-bottom:7px; }
+.sil-right p { color:var(--muted); font-size:0.85rem; line-height:1.65; }
+.sil-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.sil-chip {
+  padding: 4px 12px; border-radius:99px; font-size:0.75rem; font-weight:600;
+  display:inline-flex; align-items:center; gap:5px;
+}
+.chip-green { background:rgba(16,185,129,0.12); color:var(--green); border:1px solid rgba(16,185,129,0.25); }
+.chip-gray  { background:#f3f4f6; color:var(--muted); border:1px solid var(--border); }
+
+/* BAR CHART */
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 28px;
+}
+.chart-title { font-weight:700; font-size:1rem; margin-bottom:4px; }
+.chart-sub { font-size:0.8rem; color:var(--muted); margin-bottom:20px; }
+.chart-tabs { display:flex; gap:6px; margin-bottom:18px; }
+.ct-btn {
+  padding:6px 16px; border-radius:99px; font-size:0.78rem; font-weight:600;
+  cursor:pointer; border:1px solid var(--border);
+  background:var(--bg3); color:var(--muted);
+  font-family:'Inter',sans-serif; transition:all .2s;
+}
+.ct-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+/* CLUSTER CARDS */
+.section-title { font-weight:700; font-size:1.05rem; margin-bottom:16px; }
 .cluster-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 14px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-bottom: 28px;
 }
-.cluster-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+.clust-card {
   border-radius: var(--radius);
+  border: 1px solid;
   overflow: hidden;
-  transition: box-shadow .2s;
 }
-.cluster-card:hover { box-shadow: var(--shadow); }
-.cc-header {
-  padding: 16px 18px;
-  display: flex; align-items: center; gap: 12px;
+.cc-head {
+  padding: 18px 20px;
+  display: flex; align-items: center; justify-content: space-between;
 }
-.cc-icon {
-  width: 44px; height: 44px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.4rem;
+.cc-head-left { display:flex; align-items:center; gap: 12px; }
+.cc-icon-wrap {
+  width:46px; height:46px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.4rem; flex-shrink:0;
 }
-.cc-title { font-weight: 700; font-size: 0.95rem; }
-.cc-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
-.cc-body { padding: 0 18px 16px; }
+.cc-name { font-weight:800; font-size:0.95rem; }
+.cc-sub { font-size:0.72rem; margin-top:2px; opacity:0.65; }
+.cc-badge {
+  padding:4px 10px; border-radius:99px;
+  font-size:0.75rem; font-weight:700; flex-shrink:0;
+}
 .cc-metrics {
-  display: grid; grid-template-columns: repeat(3,1fr);
-  gap: 10px; margin-bottom: 14px;
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:10px; padding:0 20px 16px;
 }
-.cc-metric { text-align: center; }
-.cc-mval { font-size: 1rem; font-weight: 700; }
-.cc-mlbl { font-size: 0.68rem; color: var(--muted); }
-.cc-products {
-  display: flex; flex-wrap: wrap; gap: 5px;
-}
-.cc-prod-chip {
-  padding: 3px 9px; border-radius: 6px;
-  font-size: 0.72rem; font-weight: 500;
-  background: var(--bg3); color: var(--text);
-  border: 1px solid var(--border);
-}
+.cm { text-align:center; }
+.cm-val { font-size:1rem; font-weight:700; }
+.cm-lbl { font-size:0.68rem; color:var(--muted); margin-top:2px; }
 
-/* Scatter plot */
-.scatter-wrap {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
+/* PRODUK LIST */
+.cc-prod-list { padding:0 20px 16px; display:flex; flex-direction:column; gap:5px; }
+.cp-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 11px; border-radius:7px; background:#f8f9fb;
+  font-size:0.8rem;
 }
-.scatter-title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
-.scatter-sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 16px; }
+.cp-nama { font-weight:500; flex:1; min-width:0; }
+.cp-price { font-weight:700; font-size:0.78rem; flex-shrink:0; margin-left:8px; }
+.cp-sold { font-size:0.72rem; color:var(--muted); flex-shrink:0; margin-left:6px; }
 
-/* ── COLD START TAB ── */
-.coldstart-layout {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 16px;
-  align-items: start;
+/* KESIMPULAN */
+.cc-kesimpulan {
+  margin: 0 20px 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--muted);
+  border-left: 3px solid;
 }
-.form-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
-  position: sticky;
-  top: calc(var(--nav-h) + 12px);
-}
-.form-title { font-weight: 700; font-size: 1rem; margin-bottom: 20px; }
-.form-group { margin-bottom: 16px; }
-.form-label { font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 6px; display: block; }
-.form-input, .form-select {
-  width: 100%; padding: 10px 13px;
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  font-family: 'Inter', sans-serif; font-size: 0.875rem;
-  color: var(--text); background: var(--bg);
-  outline: none; transition: border-color .2s;
-}
-.form-input:focus, .form-select:focus { border-color: var(--accent); background: var(--surface); }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.submit-btn {
-  width: 100%; padding: 12px;
-  background: var(--accent); color: #fff;
-  border: none; border-radius: var(--radius-sm);
-  font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.9rem;
-  cursor: pointer; transition: all .2s; margin-top: 8px;
-}
-.submit-btn:hover { background: #4338ca; transform: translateY(-1px); }
-.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-/* Result */
-.cs-result-placeholder {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 60px 20px; text-align: center;
-}
-.cs-cluster-result {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.cs-result-header { padding: 24px; border-bottom: 1px solid var(--border); }
-.cs-result-cluster {
-  display: flex; align-items: center; gap: 16px;
-}
-.cs-cluster-icon {
-  width: 64px; height: 64px; border-radius: 16px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2rem;
-}
-.cs-cluster-name { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
-.cs-cluster-sub { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
-.confidence-bars { padding: 20px 24px; border-bottom: 1px solid var(--border); }
-.conf-title { font-weight: 600; font-size: 0.85rem; margin-bottom: 14px; }
-.conf-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.conf-label { font-size: 0.75rem; width: 80px; flex-shrink: 0; color: var(--muted); }
-.conf-bar-bg { flex: 1; background: #f3f4f6; border-radius: 99px; height: 8px; }
-.conf-bar-fill { height: 8px; border-radius: 99px; transition: width .6s ease; }
-.conf-pct { font-size: 0.75rem; font-weight: 700; width: 40px; text-align: right; }
-.cs-members { padding: 20px 24px; }
-.cs-members-title { font-weight: 600; font-size: 0.85rem; margin-bottom: 14px; }
-.cs-members-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-}
-.cs-member-card {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-.csm-name { font-weight: 600; font-size: 0.82rem; margin-bottom: 4px; }
-.csm-price { color: var(--accent); font-size: 0.8rem; font-weight: 700; }
-.csm-cat { color: var(--muted); font-size: 0.72rem; margin-top: 2px; }
 {% endblock %}
 
 {% block content %}
 <div class="page fade-up">
 
-  <div style="margin-bottom:20px">
-    <h1 style="font-size:1.6rem;font-weight:800;letter-spacing:-0.02em">🔮 Clustering & Cold Start</h1>
-    <p style="color:var(--muted);font-size:0.9rem;margin-top:6px">Analisis pengelompokan produk dan prediksi cluster untuk produk baru</p>
+  <div class="page-header">
+    <h1>🔮 Hasil Clustering Produk</h1>
+    <p>Pengelompokan seluruh produk menggunakan K-Means Clustering berdasarkan harga, berat, kategori, dan nama produk.</p>
   </div>
 
-  <!-- TABS -->
-  <div class="tab-bar">
-    <button class="tab-btn active" id="tabCluster" onclick="switchTab('cluster')">📊 Hasil Clustering</button>
-    <button class="tab-btn" id="tabColdstart" onclick="switchTab('coldstart')">✨ Prediksi Produk Baru</button>
-  </div>
-
-  <!-- ══ TAB CLUSTERING ══ -->
-  <div id="panelCluster">
-
-    <!-- Stats -->
-    <div class="cluster-stats">
-      <div class="cs-card">
-        <span class="cs-icon">🔵</span>
-        <div>
-          <div class="cs-val">{{ summary|length }}</div>
-          <div class="cs-lbl">Jumlah Cluster</div>
-        </div>
-      </div>
-      <div class="cs-card">
-        <span class="cs-icon">📦</span>
-        <div>
-          <div class="cs-val">{{ products|length }}</div>
-          <div class="cs-lbl">Total Produk</div>
-        </div>
-      </div>
-      <div class="cs-card">
-        <span class="cs-icon">📊</span>
-        <div>
-          <div class="cs-val">{{ silhouette }}</div>
-          <div class="cs-lbl">Silhouette Score</div>
-        </div>
+  <!-- STATS ROW -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-bar" style="background:var(--accent)"></div>
+      <span class="stat-icon">📦</span>
+      <div>
+        <div class="stat-val" style="color:var(--accent)">{{ products|length }}</div>
+        <div class="stat-lbl">Total Produk</div>
       </div>
     </div>
+    <div class="stat-card">
+      <div class="stat-bar" style="background:var(--purple)"></div>
+      <span class="stat-icon">🔮</span>
+      <div>
+        <div class="stat-val" style="color:var(--purple)">{{ summary|length }}</div>
+        <div class="stat-lbl">Jumlah Cluster (K)</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-bar" style="background:var(--green)"></div>
+      <span class="stat-icon">📈</span>
+      <div>
+        <div class="stat-val" style="color:var(--green)">{{ silhouette }}</div>
+        <div class="stat-lbl">Silhouette Score</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-bar" style="background:var(--gold)"></div>
+      <span class="stat-icon">🛒</span>
+      <div>
+        <div class="stat-val" style="color:var(--gold)">{{ summary.values()|sum(attribute='total_sold') }}</div>
+        <div class="stat-lbl">Total Terjual</div>
+      </div>
+    </div>
+  </div>
 
-    <!-- Cluster cards -->
-    <div class="cluster-grid">
-      {% for cid, info in summary.items() %}
-      <div class="cluster-card">
-        <div class="cc-header">
-          <div class="cc-icon" style="background:{{ info.color }}20">{{ info.icon }}</div>
+  <!-- SILHOUETTE HERO -->
+  <div class="sil-hero">
+    <div class="sil-big">{{ silhouette }}</div>
+    <div class="sil-right">
+      <h3>Silhouette Score — Evaluasi Kualitas Clustering</h3>
+      <p>Silhouette Score mengukur seberapa baik setiap produk cocok di clusternya sendiri dibandingkan cluster lain. Nilai berkisar antara −1 hingga +1. Semakin mendekati 1, pengelompokan semakin baik dan terpisah antar cluster.</p>
+      <div class="sil-chips">
+        <span class="sil-chip chip-green">✅ Skor Sistem: {{ silhouette }}</span>
+        <span class="sil-chip chip-gray">📚 Benchmark Literatur: 0.57–0.58</span>
+        <span class="sil-chip chip-green">🏆 Di atas benchmark</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- BAR CHART PERBANDINGAN -->
+  <div class="chart-wrap">
+    <div class="chart-title">Perbandingan Antar Cluster</div>
+    <div class="chart-sub">Bandingkan jumlah produk, rata-rata harga, dan total terjual antar cluster.</div>
+    <div class="chart-tabs">
+      <button class="ct-btn active" onclick="ganti('produk')">📦 Jumlah Produk</button>
+      <button class="ct-btn" onclick="ganti('harga')">💰 Rata-rata Harga</button>
+      <button class="ct-btn" onclick="ganti('terjual')">🛒 Total Terjual</button>
+    </div>
+    <canvas id="barChart" height="160"></canvas>
+  </div>
+
+  <!-- CLUSTER DETAIL CARDS -->
+  <div class="section-title">Detail Setiap Cluster</div>
+  <div class="cluster-grid">
+    {% for cid, info in summary.items() %}
+    <div class="clust-card" style="background:{{ info.color }}08; border-color:{{ info.color }}30;">
+      <div class="cc-head" style="background:{{ info.color }}10;">
+        <div class="cc-head-left">
+          <div class="cc-icon-wrap" style="background:{{ info.color }}20;">{{ info.icon }}</div>
           <div>
-            <div class="cc-title">{{ info.name }}</div>
-            <div class="cc-sub">Cluster {{ cid }} · {{ info.count }} produk</div>
+            <div class="cc-name">{{ info.name }}</div>
+            <div class="cc-sub" style="color:{{ info.color }}">Cluster {{ cid }}</div>
           </div>
         </div>
-        <div class="cc-body">
-          <div class="cc-metrics">
-            <div class="cc-metric">
-              <div class="cc-mval">{{ info.count }}</div>
-              <div class="cc-mlbl">Produk</div>
-            </div>
-            <div class="cc-metric">
-              <div class="cc-mval">Rp {{ "{:,.0f}".format(info.avg_price).replace(",",".") }}</div>
-              <div class="cc-mlbl">Rata-rata Harga</div>
-            </div>
-            <div class="cc-metric">
-              <div class="cc-mval">{{ info.total_sold }}</div>
-              <div class="cc-mlbl">Total Terjual</div>
-            </div>
-          </div>
-          <div class="cc-products">
-            {% for m in info.members %}
-            <span class="cc-prod-chip" title="{{ m.name }}">{{ m.id }}</span>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
-    <!-- Scatter Plot -->
-    <div class="scatter-wrap">
-      <div class="scatter-title">Visualisasi Cluster — PCA 2D</div>
-      <div class="scatter-sub">Setiap titik mewakili satu produk, diproyeksikan ke 2 dimensi menggunakan PCA</div>
-      <canvas id="scatterChart" height="380"></canvas>
-    </div>
-
-  </div>
-
-  <!-- ══ TAB COLD START ══ -->
-  <div id="panelColdstart" style="display:none">
-    <div class="coldstart-layout">
-
-      <!-- FORM -->
-      <div class="form-card">
-        <div class="form-title">✨ Input Produk Baru</div>
-
-        <div class="form-group">
-          <label class="form-label">Nama Produk</label>
-          <input type="text" class="form-input" id="csNama" placeholder="Contoh: Croissant Cokelat">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Kategori</label>
-          <select class="form-select" id="csKategori">
-            <option value="">-- Pilih Kategori --</option>
-            {% for cat in categories %}
-            <option value="{{ cat }}">{{ cat }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Harga (Rp)</label>
-            <input type="number" class="form-input" id="csHarga" placeholder="50000" min="0">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Berat (kg)</label>
-            <input type="number" class="form-input" id="csBerat" placeholder="0.5" min="0" step="0.001">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Platform</label>
-          <select class="form-select" id="csPlatform">
-            {% for plat in platforms %}
-            <option value="{{ plat }}">{{ plat }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <button class="submit-btn" id="csBtn" onclick="submitColdstart()">
-          🔍 Prediksi Cluster
-        </button>
+        <span class="cc-badge" style="background:{{ info.color }}20; color:{{ info.color }};">
+          {{ info.count }} produk
+        </span>
       </div>
 
-      <!-- RESULT -->
-      <div id="csResult">
-        <div class="cs-result-placeholder">
-          <div style="font-size:3rem;margin-bottom:14px">✨</div>
-          <div style="font-weight:700;font-size:1.1rem;margin-bottom:8px">Masukkan data produk baru</div>
-          <div style="color:var(--muted);font-size:0.88rem">Isi form di sebelah kiri untuk memprediksi cluster<br>dan melihat produk serupa dari cluster tersebut.</div>
+      <div class="cc-metrics">
+        <div class="cm">
+          <div class="cm-val" style="color:{{ info.color }}">{{ info.count }}</div>
+          <div class="cm-lbl">Produk</div>
+        </div>
+        <div class="cm">
+          <div class="cm-val" style="color:{{ info.color }}">Rp {{ '{:,}'.format(info.avg_price).replace(',','.') }}</div>
+          <div class="cm-lbl">Rata-rata Harga</div>
+        </div>
+        <div class="cm">
+          <div class="cm-val" style="color:{{ info.color }}">{{ info.total_sold }}</div>
+          <div class="cm-lbl">Total Terjual</div>
         </div>
       </div>
 
+      <div class="cc-prod-list">
+        {% for m in info.members %}
+        <div class="cp-item">
+          <span class="cp-nama" title="{{ m.name }}">{{ m.name }}</span>
+          <span class="cp-price" style="color:{{ info.color }}">Rp {{ '{:,}'.format(m.price).replace(',','.') }}</span>
+          <span class="cp-sold">⬇ {{ m.sold }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- KESIMPULAN -->
+      <div class="cc-kesimpulan" style="background:{{ info.color }}08; border-color:{{ info.color }};">
+        Cluster <strong>{{ info.name }}</strong> terdiri dari <strong>{{ info.count }} produk</strong>
+        dengan rata-rata harga <strong>Rp {{ '{:,}'.format(info.avg_price).replace(',','.') }}</strong>
+        dan total <strong>{{ info.total_sold }} produk terjual</strong>.
+        Produk dalam cluster ini memiliki kesamaan karakteristik berdasarkan kategori, rentang harga, dan berat,
+        sehingga cocok untuk direkomendasikan secara bersamaan kepada pelanggan.
+      </div>
+
     </div>
+    {% endfor %}
   </div>
 
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
-const PRODUCTS = {{ products | tojson }};
-const SUMMARY  = {{ summary | tojson }};
-const CLUSTER_NAMES  = {{ cluster_names | tojson }};
+const SUMMARY = {{ summary | tojson }};
 const CLUSTER_COLORS = {{ cluster_colors | tojson }};
-const CLUSTER_ICONS  = {{ cluster_icons | tojson }};
-const CENTROIDS_PCA  = {{ centroids_pca | tojson }};
+const CLUSTER_ICONS  = {{ cluster_icons  | tojson }};
+const CLUSTER_NAMES  = {{ cluster_names  | tojson }};
 
-// ── TABS ──
-function switchTab(tab) {
-  document.getElementById('panelCluster').style.display   = tab === 'cluster'   ? '' : 'none';
-  document.getElementById('panelColdstart').style.display = tab === 'coldstart' ? '' : 'none';
-  document.getElementById('tabCluster').classList.toggle('active',   tab === 'cluster');
-  document.getElementById('tabColdstart').classList.toggle('active', tab === 'coldstart');
-}
+const cids   = Object.keys(SUMMARY).map(Number);
+const labels = cids.map(id => CLUSTER_ICONS[id] + ' ' + CLUSTER_NAMES[id]);
+const colors = cids.map(id => CLUSTER_COLORS[id] + 'cc');
+const bords  = cids.map(id => CLUSTER_COLORS[id]);
 
-// ── SCATTER CHART ──
-const clusterIds = Object.keys(SUMMARY).map(Number);
-const datasets = clusterIds.map(cid => {
-  const members = PRODUCTS.filter(p => p.cluster === cid);
-  return {
-    label: CLUSTER_ICONS[cid] + ' ' + CLUSTER_NAMES[cid],
-    data: members.map(p => ({ x: p.pca1, y: p.pca2, name: p.id, fullName: p.name })),
-    backgroundColor: CLUSTER_COLORS[cid] + 'cc',
-    borderColor: CLUSTER_COLORS[cid],
-    borderWidth: 2,
-    pointRadius: 8,
-    pointHoverRadius: 11,
-  };
-});
+const dataSets = {
+  produk:  cids.map(id => SUMMARY[id].count),
+  harga:   cids.map(id => SUMMARY[id].avg_price),
+  terjual: cids.map(id => SUMMARY[id].total_sold),
+};
+const labels2 = {
+  produk:  'Jumlah Produk',
+  harga:   'Rata-rata Harga (Rp)',
+  terjual: 'Total Terjual',
+};
 
-// Centroids dataset
-if (CENTROIDS_PCA.length) {
-  datasets.push({
-    label: '✦ Centroid',
-    data: CENTROIDS_PCA.map(c => ({ x: c[0], y: c[1] })),
-    backgroundColor: '#1a1a2e',
-    borderColor: '#fff',
-    borderWidth: 2,
-    pointRadius: 10,
-    pointStyle: 'star',
-    pointHoverRadius: 13,
-  });
-}
-
-new Chart(document.getElementById('scatterChart'), {
-  type: 'scatter',
-  data: { datasets },
+let aktif = 'produk';
+const barChart = new Chart(document.getElementById('barChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: labels2[aktif],
+      data: dataSets[aktif],
+      backgroundColor: colors,
+      borderColor: bords,
+      borderWidth: 2,
+      borderRadius: 8,
+    }]
+  },
   options: {
     responsive: true,
     plugins: {
-      legend: { position: 'bottom', labels: { padding: 16, font: { size: 12 } } },
+      legend: { display: false },
       tooltip: {
         callbacks: {
           label: ctx => {
-            const d = ctx.raw;
-            return d.name ? `${d.name}: ${d.fullName || ''}` : 'Centroid ' + ctx.datasetIndex;
+            const v = ctx.raw;
+            if (aktif === 'harga') return 'Rp ' + v.toLocaleString('id-ID');
+            return v.toLocaleString('id-ID');
           }
         }
       }
     },
     scales: {
-      x: { title: { display: true, text: 'PCA 1', font: { size: 12 } }, grid: { color: '#f3f4f6' } },
-      y: { title: { display: true, text: 'PCA 2', font: { size: 12 } }, grid: { color: '#f3f4f6' } }
+      y: { beginAtZero: true, grid: { color: '#f3f4f6' },
+           ticks: { font: { size: 11 }, callback: v => aktif === 'harga' ? 'Rp '+v.toLocaleString('id-ID') : v } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } }
     }
   }
 });
 
-// ── COLD START ──
-function fmt(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
-
-async function submitColdstart() {
-  const nama     = document.getElementById('csNama').value.trim();
-  const kategori = document.getElementById('csKategori').value;
-  const harga    = parseFloat(document.getElementById('csHarga').value) || 0;
-  const berat    = parseFloat(document.getElementById('csBerat').value) || 0;
-  const platform = document.getElementById('csPlatform').value;
-
-  if (!nama) { alert('Nama produk wajib diisi!'); return; }
-
-  const btn = document.getElementById('csBtn');
-  btn.disabled = true; btn.textContent = '⏳ Memprediksi...';
-
-  const res  = await fetch('/api/coldstart', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: nama, category: kategori, price: harga, weight: berat/1000, platform })
+function ganti(tipe) {
+  aktif = tipe;
+  barChart.data.datasets[0].data  = dataSets[tipe];
+  barChart.data.datasets[0].label = labels2[tipe];
+  barChart.update();
+  document.querySelectorAll('.ct-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['produk','harga','terjual'][i] === tipe);
   });
-  const data = await res.json();
-  btn.disabled = false; btn.textContent = '🔍 Prediksi Cluster';
-  renderColdstartResult(data, nama, kategori, harga, berat, platform);
-}
-
-function renderColdstartResult(data, nama, kategori, harga, berat, platform) {
-  const cid   = data.cluster;
-  const color = CLUSTER_COLORS[cid] || '#6b7280';
-  const icon  = CLUSTER_ICONS[cid]  || '📦';
-  const cname = CLUSTER_NAMES[cid]  || 'Cluster ' + cid;
-  const confs = data.confidences || {};
-  const members = data.cluster_members || [];
-
-  const confRows = Object.entries(confs).map(([id, pct]) => {
-    const c = CLUSTER_COLORS[parseInt(id)] || '#6b7280';
-    const nm = CLUSTER_NAMES[parseInt(id)] || 'Cluster ' + id;
-    return `
-      <div class="conf-row">
-        <div class="conf-label">${CLUSTER_ICONS[parseInt(id)] || ''} ${nm}</div>
-        <div class="conf-bar-bg">
-          <div class="conf-bar-fill" style="width:${pct}%;background:${c}"></div>
-        </div>
-        <div class="conf-pct" style="color:${c}">${pct}%</div>
-      </div>`;
-  }).join('');
-
-  // Simpan data hasil prediksi untuk tombol simpan
-  _lastPrediction = { name: nama, category: kategori, price: harga, weight: berat, platform, cluster: cid, pca1: 0, pca2: 0 };
-
-  document.getElementById('csResult').innerHTML = `
-    <div class="cs-cluster-result fade-up">
-      <div class="cs-result-header">
-        <div style="font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Hasil Prediksi untuk "${nama}"</div>
-        <div class="cs-result-cluster">
-          <div class="cs-cluster-icon" style="background:${color}20">${icon}</div>
-          <div>
-            <div class="cs-cluster-name">${cname}</div>
-            <div class="cs-cluster-sub">Cluster ${cid} · ${members.length} produk serupa</div>
-            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
-              ${kategori ? `<span style="padding:3px 10px;border-radius:99px;background:${color}15;color:${color};font-size:0.75rem;font-weight:600">${kategori}</span>` : ''}
-              <span style="padding:3px 10px;border-radius:99px;background:#f3f4f6;font-size:0.75rem;color:var(--muted)">${platform}</span>
-              ${harga ? `<span style="padding:3px 10px;border-radius:99px;background:#f3f4f6;font-size:0.75rem;font-weight:600;color:var(--accent)">${fmt(harga)}</span>` : ''}
-              ${berat ? `<span style="padding:3px 10px;border-radius:99px;background:#f3f4f6;font-size:0.75rem;color:var(--muted)">⚖️ ${berat} kg</span>` : ''}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="confidence-bars">
-        <div class="conf-title">Tingkat Kemiripan per Cluster</div>
-        ${confRows}
-      </div>
-
-      <div class="cs-members">
-        <div class="cs-members-title">Produk Serupa di ${cname}</div>
-        <div class="cs-members-grid">
-          ${members.map(m => `
-            <div class="cs-member-card">
-              <div class="csm-name">${m.name}</div>
-              <div class="csm-price">${fmt(m.price)}</div>
-              <div class="csm-cat">${m.category} · ${m.platform}</div>
-            </div>`).join('')}
-        </div>
-      </div>
-
-      <!-- Tombol Simpan -->
-      <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px">
-        <button onclick="simpanProduk()" id="btnSimpan"
-          style="padding:10px 24px;background:var(--green);color:#fff;border:none;border-radius:8px;font-family:Inter,sans-serif;font-weight:600;font-size:0.875rem;cursor:pointer;transition:all .2s">
-          💾 Simpan Produk ke Sistem
-        </button>
-        <span style="font-size:0.8rem;color:var(--muted)">Produk akan masuk ke database dan bisa dilihat di halaman Rekomendasi</span>
-      </div>
-      <div id="simpanMsg" style="padding:0 24px 16px;display:none"></div>
-    </div>`;
-}
-
-let _lastPrediction = null;
-
-async function simpanProduk() {
-  if (!_lastPrediction) return;
-  const btn = document.getElementById('btnSimpan');
-  btn.disabled = true; btn.textContent = '⏳ Menyimpan...';
-
-  const res  = await fetch('/api/coldstart/simpan', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(_lastPrediction)
-  });
-  const data = await res.json();
-  const msg  = document.getElementById('simpanMsg');
-  msg.style.display = 'block';
-
-  if (data.success) {
-    msg.innerHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;font-size:0.85rem;color:#15803d">
-      ✅ ${data.message}
-    </div>`;
-    btn.textContent = '✅ Tersimpan';
-    _lastPrediction = null;
-  } else {
-    msg.innerHTML = `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px;font-size:0.85rem;color:#dc2626">
-      ❌ ${data.error}
-    </div>`;
-    btn.disabled = false; btn.textContent = '💾 Simpan Produk ke Sistem';
-  }
 }
 </script>
 {% endblock %}
