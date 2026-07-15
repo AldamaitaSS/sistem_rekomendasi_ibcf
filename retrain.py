@@ -27,7 +27,7 @@ def train_kmeans(item_features, df_item, n_clusters=None, log_fn=None, threshold
         log_fn(f"    📦 Jumlah produk (n_samples): {n_samples}")
         sil_scores = []
         for k in k_range:
-            km_temp     = KMeans(n_clusters=k, random_state=42, n_init=10)
+            km_temp     = KMeans(n_clusters=k, init='random', random_state=42, n_init=10)
             labels_temp = km_temp.fit_predict(item_features)
             score       = silhouette_score(item_features, labels_temp)
             sil_scores.append(score)
@@ -42,7 +42,7 @@ def train_kmeans(item_features, df_item, n_clusters=None, log_fn=None, threshold
         if best_k != n_clusters:
             log_fn(f"    ⚠️ Jumlah cluster disesuaikan ke k={best_k} karena produk hanya {n_samples}")
 
-    kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10)
+    kmeans = KMeans(n_clusters=best_k, init='random', random_state=42, n_init=10)
     df_item = df_item.copy()
     df_item['cluster'] = kmeans.fit_predict(item_features)
 
